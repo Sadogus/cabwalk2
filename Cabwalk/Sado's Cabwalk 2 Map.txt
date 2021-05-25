@@ -1,0 +1,556 @@
+@name Sado's Cabwalk 2.TEST Map
+@inputs [Ent1 Ent2 Ent3 Ent4 Ent5]:entity   #Here you can add more if you use more than 5 parent entities
+@outputs NativeMap:entity [ActiveZones ActivePortals]:table
+
+@persist [Map Areas Polygons Portals Global Indexes Selectable PolyImport RenderPortals ImportedPortal ReqPortal TheGlobal RequestGlobal Children]:table 
+@persist Wave Wave2 XCount PCount ReqEnt:entity
+
+if(duped()){reset()}
+if(first()|inputClk()){#[
+    
+    Welcome to Sado's Cabwalk Map E2. This is used for storing walkable maps for use with the simulator.
+    
+    Use the editor e2 to create a map and import it below.
+    
+    Link the entity baseplates in the same order they were selected in to make the areamap. You will usually only use Ent1, unless your vehicle is articulated.
+    
+    
+    
+    ]#
+
+    #Map Settings
+    RenderMap = 1     #DEBUG: Renders the zones and portals as holograms (similar to the editor)
+
+    #Paste the exported config from the editor down below.
+    
+
+
+
+
+
+
+
+
+
+
+
+
+    #Warranty void if e2 is tampered beyond this line 
+    #---------------------------------------------------------
+
+
+    Map = table()
+    RenderPortals = table()
+
+    if(Areas|Polygons|Portals){
+            
+        for(I = 1,Areas:count()){
+            
+            local A = Areas[I,table]
+            
+            if(!A[3,entity]){hint("Please link all entity inputs when importing.",5)}
+            
+            Map[A[1,number],table] = A
+
+        }
+        for(I = 1,Polygons:count()){
+            
+            local P = Polygons[I,table]
+
+            if(!P[3,entity]){hint("Please link all entity inputs when importing.",5)}
+
+            Map[P[1,number],table] = P
+
+            Vertices = Polygons[I,table][4,array]
+            
+            for(J = 3,Vertices:count()){
+                
+                PolyImport:pushArray(array(Polygons[I,table][3,entity],Vertices[J-1,vector],Vertices[J,vector]))
+                
+            }
+
+        }
+        for(I = 1,Portals:count()){
+            
+            local X = Portals[I,table]
+            Map[X[1,number],table] = X
+            
+            if(X[2,string] == "global"){
+                
+                Global:pushTable(X)
+                
+            }
+            if(X[2,string] == "portal" & Map[X[3,number],table][3,entity] != Map[X[4,number],table][3,entity]){
+                
+                X:pushNumber(I)
+                RenderPortals:pushTable(X)
+                
+            }
+            
+        }
+
+    }
+    else{
+        
+        hint("Error! Please import an areamap from the editor.",5)
+        
+    }
+    
+    for(I=1,Children:count()){
+        
+        dsSendDirect("mapupdate",Children[I,entity],Map)
+        
+    }
+    
+}
+if(first()){
+    
+    ActivePortals = table()
+    ActiveZones = table()
+    NativeMap = entity()
+
+    dsJoinGroup("cabwalk")
+    dsSetScope(2)    
+        
+    if(RenderMap){
+        
+        interval(1000)
+        Interpolate = array()
+        Indexes = table(table(),table())
+        Wave2 = 1
+        Wave = 15
+        
+        timer("render",0)
+    
+        function holoInterpolate(IndexA, Ent:entity, Pos1:vector, Pos2:vector){
+            
+            holoPos(IndexA,Ent:toWorld((Pos1 + Pos2)/2))
+            holoAng(IndexA,Ent:toWorld((Pos1 - Pos2):toAngle()))
+            holoScale(IndexA,vec(Pos1:distance(Pos2)/96,0.03,0.03))     
+               
+        }
+        
+        function holoInterpolate(IndexA, Pos1:vector, Pos2:vector){
+            
+            holoPos(IndexA,(Pos1 + Pos2)/2)
+            holoAng(IndexA,(Pos1 - Pos2):toAngle())
+            holoScale(IndexA,vec(Pos1:distance(Pos2)/96,0.03,0.03))    
+                
+        }
+    
+        function pushIndex(Type,ParentEnt:entity,Thickness){
+            #Type is either 1 for area/poly or 2 for portals/global
+            
+            local Table = Indexes[Type,table]
+            local Index = Table:count()
+            local Offset = 1000+500*Type
+            local HoloIndex = Offset + Table[Table:count(),number]
+            local Value = Index + 1
+            local Numbers = Value:toString():explode("")
+            local NumCount = Numbers:count()
+            
+            for(I = 1,NumCount){
+    
+                HoloIndex += 1
+                
+                holoCreate(HoloIndex)
+                holoParent(HoloIndex,ParentEnt)
+                holoPos(HoloIndex,ParentEnt:toWorld(vec(1+NumCount-2*I,0,0)))
+                holoAng(HoloIndex,ParentEnt:toWorld(ang(0,0,90)))
+                holoModel(HoloIndex,"models/sprops/misc/alphanum/alphanum_"+Numbers[I,string]+".mdl")
+                holoScale(HoloIndex,vec(0.2,Thickness,0.2))
+                holoMaterial(HoloIndex,"models/debug/debugwhite")
+                holoColor(HoloIndex,vec())
+            
+            }
+    
+            Table:pushNumber(HoloIndex-Offset)
+    
+        }    
+    
+    }
+    
+}
+elseif(clk("render")){
+    
+    Wave+=3
+    
+    for(I=Wave2,min(Wave,(Map:count()+PolyImport:count()))){
+
+        if(I <= Map:count()){
+
+            String = Map[I,table][2,string]
+            
+            switch(String){
+                
+                case "area",
+
+                    A = Map[I,table]
+                    local AP = A[3,entity]
+    
+                    holoCreate(I)
+                    pushIndex(1,holoEntity(I),0.4)
+                    
+                    holoModel(I,"models/hunter/blocks/cube2x2x2.mdl")
+                    holoMaterial(I,"models/debug/debugwhite")
+                    holoDisableShading(I,0)
+                    holoParent(I,AP)
+                    holoColor(I,vec4(50,200,100,255))
+                    holoPos(I,AP:toWorld(A[4,vector]))
+                    holoAng(I,AP:toWorld(ang()))
+                    holoScale(I,A[5,vector]/96+vec(0,0,0.01))
+                    
+                break
+    
+                case "poly",
+                    
+                    P = Map[I,table]
+                    local AP = P[3,entity]
+
+                    holoCreate(I)
+                    pushIndex(1,holoEntity(I),1)
+                    
+                    holoInterpolate(I,P[3,entity],P[4,array][1,vector],P[4,array][2,vector])
+                    holoModel(I,"models/hunter/blocks/cube2x2x2.mdl")
+                    holoMaterial(I,"models/debug/debugwhite")
+                    holoDisableShading(I,0)
+                    holoParent(I,AP)
+                    holoColor(I,vec4(50,200,100,255))
+                                                             
+                break
+    
+                case "portal",
+                    
+                    local X = Map[I,table]
+                    local A1 = Map[X[3,number],table]
+                    local A2 = Map[X[4,number],table]
+    
+                    local AP1 = A1[3,entity]
+                    local AP2 = A2[3,entity]
+                    
+                    Point1 = 500+XCount
+                    Point2 = 501+XCount
+
+                    holoCreate(I)
+                    holoCreate(Point1)
+                    holoCreate(Point2)
+                    pushIndex(2,holoEntity(I),1)
+
+                    holoParent(I,AP1)
+                    holoColor(I,vec4(255,0,255,255))                    
+                    holoScale(I,vec(0.1))
+                    holoModel(I,"models/hunter/blocks/cube2x2x2.mdl")
+                    holoMaterial(I,"models/debug/debugwhite")
+                    holoDisableShading(I,0)
+                    
+                    holoParent(Point1,AP1)
+                    holoAng(Point1,AP1:toWorld(ang()))
+                    holoModel(Point1,"hqsphere")
+                    holoScale(Point1,vec(X[7,number]/6))
+                    holoColor(Point1,vec4(255,0,255,255))
+                    holoDisableShading(Point1,0)
+                    
+                    holoParent(Point2,AP2)
+                    holoAng(Point2,AP2:toWorld(ang()))
+                    holoModel(Point2,"hqsphere")
+                    holoScale(Point2,vec(X[8,number]/6))
+                    holoColor(Point2,vec4(255,0,255,255))
+                    holoDisableShading(Point2,0)
+    
+                    if(A1[2,string] == "area"){
+                        
+                        holoPos(Point1,AP1:toWorld(X[5,vector]))
+                        
+                    }
+                    else{
+                        
+                        CP = floor(X[5,number])
+                        Coefficient = X[5,number] - CP
+                        
+                        Pos1 = A1[4,array][CP+1,vector]
+                        Pos2 = A1[4,array][CP+2,vector]
+                        
+                        holoPos(Point1,A1[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                        
+                    }
+                    
+                    if(A2[2,string] == "area"){
+                        
+                        holoPos(Point2,AP2:toWorld(X[6,vector]))
+                        
+                    }
+                    else{
+
+                        CP = floor(X[6,number])
+                        Coefficient = X[6,number] - CP
+                        
+                        Pos1 = A2[4,array][CP+1,vector]
+                        Pos2 = A2[4,array][CP+2,vector]
+                        
+                        holoPos(Point2,A2[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                        
+                    }
+                    
+                    holoInterpolate(I,holoEntity(Point1):pos(),holoEntity(Point2):pos())
+                    
+                    XCount += 2
+      
+                break
+    
+                case "global",
+                    
+                    local X = Map[I,table]
+                    local A1 = Map[X[3,number],table]
+    
+                    local AP1 = A1[3,entity]
+                                        
+                    Point1 = 500+XCount
+                    Point2 = 501+XCount
+                    
+                    Radius = X[6,number]
+                        
+                    holoCreate(I)
+                    holoCreate(Point1)
+                    holoCreate(Point2)
+                    pushIndex(2,holoEntity(I),Map[I,table][5,number]/1.5)
+    
+                    holoMaterial(I,"models/debug/debugwhite")
+                    holoDisableShading(I,0)                                    
+                    holoParent(I,AP1)
+                    holoAng(I,AP1:toWorld(ang()))
+                    holoModel(I,"hqsphere")
+                    holoColor(I,vec(255,255,0))                    
+                    holoScale(I,vec(X[5,number]/6))
+    
+                    holoModel(Point1,"hqsphere")
+                    holoPos(Point1,holoEntity(I):pos())
+                    holoParent(Point1,I)
+                    holoScale(Point1,vec(Radius/6))
+                    holoDisableShading(Point1,1)
+                    holoColor(Point1,vec4(255,255,255,5))
+                
+                    holoModel(Point2,"hqsphere")
+                    holoPos(Point2,holoEntity(I):pos())
+                    holoParent(Point2,I)
+                    holoScale(Point2,vec(-Radius/6))
+                    holoDisableShading(Point2,1)
+                    holoColor(Point2,vec4(255,255,255,5))
+        
+                    if(A1[2,string] == "area"){
+                        
+                        holoPos(I,AP1:toWorld(X[4,vector]))
+                        
+                    }
+                    else{
+                        
+                        CP = floor(X[4,number])
+                        Coefficient = X[4,number] - CP
+                        
+                        Pos1 = A1[4,array][CP+1,vector]
+                        Pos2 = A1[4,array][CP+2,vector]
+                        
+                        holoPos(I,A1[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                        
+                    }
+    
+                    
+                    XCount += 2
+      
+                break
+                
+            }
+      
+        }
+        else{
+            
+            I -= Map:count()-1000
+            
+            P = Map[I,table]
+                
+            holoCreate(I)
+
+            Array = PolyImport[I-1000,array]
+            holoInterpolate(I,Array[1,entity],Array[2,vector],Array[3,vector])
+            holoModel(I,"models/hunter/blocks/cube2x2x2.mdl")
+            holoMaterial(I,"models/debug/debugwhite")
+            holoDisableShading(I,0)
+            holoParent(I,Array[1,entity])
+            holoColor(I,vec4(50,200,100,255))
+
+            PCount += 1
+
+        }
+        
+    }
+    
+    Wave2 = Wave + 1
+    
+    if(Wave<(Map:count()+PolyImport:count())){
+        
+        timer("render",1000)
+
+        
+    }
+
+    
+}
+if(dsClk()){
+
+    ReqEnt = dsGetSender()
+    DsName = dsClkName()
+    
+    switch(DsName){
+        
+        case "activezone",
+            
+            ActiveZones[dsGetNumber(),number]=ActiveZones[dsGetNumber(),number]+1
+            
+        break
+        
+        case "inactivezone",
+            
+            ActiveZones[dsGetNumber(),number]=ActiveZones[dsGetNumber(),number]-1
+            
+        break
+
+        case "activeportal",
+            
+            ActivePortals[dsGetNumber(),number]=ActivePortals[dsGetNumber(),number]+1
+
+        break
+        
+        case "inactiveportal",
+        
+            ActivePortals[dsGetNumber(),number]=ActivePortals[dsGetNumber(),number]-1
+            
+        break
+                
+        case "globalcheck",
+
+            for(I=1,Children:count()){
+                
+                if(Children[I,entity] == ReqEnt){
+                    
+                    IsSelf = 1
+                    break
+                    
+                }
+                
+            }
+            if(!IsSelf){
+                
+                ReqPortal = dsGetTable()
+                
+                for(I=1,Global:count()){
+                    
+                    G = Global[I,table]
+                    GA = Map[G[3,number],table]
+                    
+                    if(GA[2,string] == "area"){
+                        
+                        #Global portal POS if area
+                        PosLocalGlobal = G[4,vector]
+                        
+                    }
+                    else{
+                        
+                        #Global portal POS if poly
+                        CPTemp = G[4,number] + 1
+                        CPTempIndex = floor(CPTemp)
+                        CPTempCoefficient = CPTemp-CPTempIndex
+                        
+                        Array = GA[4,array]
+                        
+                        PosLocalGlobal = mix(Array[CPTempIndex+1,vector],Array[CPTempIndex,vector],CPTempCoefficient)
+
+                    }
+                    #temporary debug holos
+                    EE = randint(1,20)
+                    holoCreate(910+EE)
+                    holoPos(910+EE,GA[3,entity]:toWorld(PosLocalGlobal))
+                    
+                    #the foreign global position local to the entity of the local global portal
+                    ReqPosLocal = GA[3,entity]:toLocal(ReqPortal[1,entity]:toWorld(ReqPortal[2,vector]))                    
+                    #PosLocalGlobal and ReqPosLocal are now both relative to the local global portals entity
+                    
+                    if(ReqPosLocal:distance(PosLocalGlobal) < ReqPortal[3,number]){
+                        
+                        GlobalInitPackage = table(GA[3,entity],PosLocalGlobal,G[3,number],G[4,number])
+                        
+                        dsSendDirect("globalconfirm",ReqEnt,GlobalInitPackage) 
+                        
+                    }
+                    
+                }
+                
+            }
+
+                    
+        break
+        
+        case "maprequest",
+        
+            MapPackage = Map:clone()
+            MapPackage:pushNumber(dsGetNumber())
+            
+            #the number is whether to update default pos or not
+            dsSendDirect("mapupdate",ReqEnt,MapPackage)
+            
+            for(I=1,Children:count()){
+                
+                if(Children[I,entity] == ReqEnt){
+                    
+                    #this variable name is hilarious
+                    IgnoreChild = 1
+                    break
+                    
+                }
+                
+            }
+            if(!IgnoreChild){
+                
+                Children:pushEntity(ReqEnt)
+
+            }                
+            
+        
+        break
+        
+        case "breakconnection",
+        
+            for(I=1,Children:count()){
+                
+                if(Children[I,entity] == ReqEnt){
+                    
+                    Children:remove(I)
+                    
+                }
+                
+            }
+            if(!Children:count()){
+                
+                ActivePortals:clear()
+                ActiveZones:clear()
+                
+            }
+                    
+        break
+        
+    }
+
+}
+if(clk()){
+    
+    interval(100)
+    
+    for(I=1,RenderPortals:count()){
+        
+        Point1 = 498+I*2
+        Point2 = 499+I*2
+        
+        holoInterpolate(RenderPortals[I,table][1,number],holoEntity(Point1):pos(),holoEntity(Point2):pos())
+        
+    }
+    
+}
+
