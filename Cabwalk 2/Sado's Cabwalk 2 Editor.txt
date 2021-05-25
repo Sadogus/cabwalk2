@@ -1,0 +1,2610 @@
+@name Sado's Cabwalk 2.TEST Editor
+@inputs [Ent1 Ent2 Ent3 Ent4 Ent5]:entity   #ONLY USED FOR IMPORTING!! Here you can add more if you use more than 5 parent entities
+@persist [DeleteQuery IndexedEnts]:array [Areas Polygons Portals Map Indexes Selectable Temp PolyImport RenderPortals ExportMap EAreas EPolygons EPortals]:table 
+@persist [O LastParent]:entity [Step SoundConfirm SoundDone SoundFail SoundCancel]:string IndexA IndexB IndexC Wave Wave2 XCount PCount Crowbar Editing Spawn SelZone
+@model models/props_c17/oildrum001.mdl
+
+if(first()){
+    #[
+    PLEASE MAKE SURE TO READ THESE INSTRUCTIONS BEFORE CREATING A MAP
+    
+    Welcome to Sado's Cabwalk Editor E2. You can use this tool to create a map.
+    
+    Making large maps may hit the print() limit. Change the print limit by opening your console and typing:
+    wire_expression2_print_max 1000
+    
+    Creating a map
+    In order to create a map you need to hold your crowbar and type the following commands:
+    "-c area" or "-c a" to make an area. Areas are rectangular platforms you can walk on. Cannot be angled.
+    "-c poly" or "-c p" to make a polygon. Polygons are a series of paths made of line segments. They can be angled. Used mainly for running boards.
+    "-c portal" or "-c x" to make a portal. Portals connect zones together. You can change their node size with "-c node <radius>" or "-c n <radius>".
+    "-c global" or "-c g" to make a global portal. Global portals connect maps together. You create one point, which links to other global portals within its radius.
+       You can change their node size with "-c node <radius>" or "-c n <radius>" and their effect radius with "-c radius <radius>" or "-c r <radius>"
+    
+    "-c export" or "-c e" to export the map. You can then copy the map and copy it into the simulator E2.
+    "-c undo" or "-c u" to undo your last action. THIS DOES NOT WORK WITH UNDOING DELETIONS. It will delete the latest zone/portal present.
+    "-c delete <type> <index>" or "-c d <type> <index>" to delete any entry. Type can be either "zone/z" or "portal/x". 
+    
+    Creating an area:
+    1. First you need to select a parent entity. The parent entity is what the area will be relative to. This would normally be the baseplate.
+       Note the E2 might not work if the baseplate is rotated. If the numbers are mirrored, your baseplate is upside down.
+    2. Select the starting point of the area. This is the first corner of the area.
+    3. Select the second point of the area. This will create a rectangle.
+    4. Select the height of the area. In case you want the area to be lower or higher than the points you selected, you can change it here.
+    
+    Creating a polygon:
+    1. First you need to select a parent entity.
+    2. Select the starting point of the poly.
+    3. Select a point in the poly. You can repeat this step or finish the poly.
+    
+    Creating a portal:
+    1. Select the area/poly you want a portal from by right clicking. You can type "-c node <radius>" or "-c n <radius>" to change the radius of the node. 
+       You can type "-c sel <area>" or "-c s <area>" to select an area by its index.
+    2. Select the area/poly you want a portal to by right clicking. Same rules apply.
+    
+    Creating a global portal:
+    1. Select the area/poly you want a global portal from by right clicking. You can type "-c node <radius>" or "-c n <radius>" to change the radius of the node. 
+       You can type "-c sel <area>" or "-c s <area>" to select an area by its index. You can type "-c radius <radius>" or "-c r <radius>" to change the effect radius.
+        
+    Exporting configuration:
+    When you're done with the map, you can type "-c export" or "-c e" to export the configuration. The configuration will show up in chat and console.
+
+    Copy this configuration and paste it into the map E2.
+    
+    After you've exported the configuration, you can delete this E2.
+    
+    
+    
+    You can import a configuration by pasting the exported config below
+    
+    ]#
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    #[
+    
+    Areas is a table of tables consisting of:
+    [1,number] - global index
+    [2,string] - type
+    [3,entity] - parent entity
+    [4,vector] - area pos
+    [5,vector] - area scale
+    
+    Polygons is a table of tables consisting of:
+    [1,number] - global index
+    [2,string] - type
+    [3,entity] - parent entity
+    [4,array] - array of vector points
+    [5,number] - start index of extra paths
+        
+    Portals is a table of tables consisting of:
+    Portals:
+        [1,number] - global index
+        [2,string] - type
+        [3,number] - parent A
+        [4,number] - parent B
+        [5,vector/number] - pos A / pos coefficient
+        [6,vector/number] - pos B / pos coefficient
+        [7,number] - A node radius
+        [8,number] - B node radius
+        [9,number] - portal unlocked
+        [10,number] - portal type
+    Global:
+        [1,number] - global index
+        [2,string] - type
+        [3,number] - parent A
+        [4,vector/number] - pos coefficient
+        [5,number] - node radius
+        [6,number] - effect radius
+    
+    #Warranty void if e2 is tampered beyond this line 
+    #---------------------------------------------------------    
+    ]#
+    
+    
+    
+    
+    
+    Interpolate = array()
+    Indexes = table(table(),table())
+    Map = table()
+    O = owner()
+    Wave2 = 1
+    
+    runOnChat(1)
+    runOnKeys(O,1)
+    
+    if(Areas|Polygons|Portals){
+        
+        for(I = 1,Areas:count()){
+            
+            local A = Areas[I,table]
+            
+            if(!A[3,entity]){error("Please link all entity inputs when importing.")}
+            
+            Map[A[1,number],table] = A
+
+        }
+        for(I = 1,Polygons:count()){
+            
+            local P = Polygons[I,table]
+
+            if(!P[3,entity]){error("Please link all entity inputs when importing.")}
+
+            Map[P[1,number],table] = P
+
+            Vertices = Polygons[I,table][4,array]
+            
+            for(J = 3,Vertices:count()){
+                
+                PolyImport:pushArray(array(Polygons[I,table][3,entity],Vertices[J-1,vector],Vertices[J,vector]))
+                
+            }
+
+        }
+        for(I = 1,Portals:count()){
+            
+            local X = Portals[I,table]
+            Map[X[1,number],table] = X
+            
+            #if(X[2,string] == "portal" & Map[X[3,number],table][3,entity] != Map[X[4,number],table][3,entity]){
+                
+                #X:pushNumber(I)
+                #RenderPortals:pushTable(X)
+                
+            #}
+            
+        }
+        
+        Wave = 15
+        Spawn = 1
+        timer("import",0)
+        O:soundPlay(1,0,"ambient/levels/labs/equipment_printer_loop1.wav")
+        
+    }
+    
+    SoundConfirm = "buttons/blip1.wav"
+    SoundDone = "buttons/bell1.wav"
+    SoundFail = "buttons/button10.wav"
+    SoundCancel = "buttons/button11.wav"
+
+    function string vecToString(Vector:vector){
+        
+        return "vec("+Vector:x()+","+Vector:y()+","+Vector:z()+")"
+        
+    }
+    
+    function vector areaClamp(Pos:vector, Scale:vector, PosIn:vector){ 
+        
+        return clamp(PosIn,Pos-Scale/2,Pos+Scale/2)
+        
+    }
+    
+    function holoInterpolate(IndexA, Ent:entity, Pos1:vector, Pos2:vector){
+        
+        holoPos(IndexA,Ent:toWorld((Pos1 + Pos2)/2))
+        holoAng(IndexA,Ent:toWorld((Pos1 - Pos2):toAngle()))
+        holoScale(IndexA,vec(Pos1:distance(Pos2)/96,0.03,0.03))     
+           
+    }
+    
+    function holoInterpolate(IndexA, Pos1:vector, Pos2:vector){
+        
+        holoPos(IndexA,(Pos1 + Pos2)/2)
+        holoAng(IndexA,(Pos1 - Pos2):toAngle())
+        holoScale(IndexA,vec(Pos1:distance(Pos2)/96,0.03,0.03))    
+            
+    }
+
+    function number linePoint(Pos1:vector, Pos2:vector, Point:vector){
+        
+        P1P2 = Pos2-Pos1
+        P1S = Point-Pos1
+        
+        P1P2sq = P1P2:x()^2+P1P2:y()^2+P1P2:z()
+        Proportion = P1S:dot(P1P2)/P1P2sq
+    
+        return clamp(Proportion,0,1)
+        
+    }
+    
+    function number distToLine(Pos1:vector,Pos2:vector,Point:vector){
+        
+        Coefficient = linePoint(Pos1,Pos2,Point)
+        
+        RelativePos = mix(Pos2,Pos1,Coefficient)
+        
+        Dist = Point:distance(RelativePos)
+        
+        return Dist
+        
+    } 
+    
+    function number closestPoint(Parent:entity,Pos:vector,Vectors:array){
+        
+        Distances = array()
+
+        for(I = 2,Vectors:count()){
+            
+            Pos1 = Vectors[I-1,vector]
+            Pos2 = Vectors[I,vector]
+            
+            Coefficient = linePoint(Pos1,Pos2,Pos)
+            
+            RelativePos = mix(Pos2,Pos1,Coefficient)
+            
+            Dist = Pos:distance(RelativePos)
+            
+            Distances:pushNumber(Dist)
+            
+        }
+        
+        return Distances:minIndex()
+        
+    }
+
+    function number localGlobal(IndexA){
+        
+        Out = 0
+        
+
+        
+        for(I = 1,Selectable:count()){
+            
+            if(Selectable[I,table][1,number]==IndexA){
+                
+                Out = I
+                
+            }
+            
+        }
+        for(I = 1,Portals:count()){
+            
+            if(Portals[I,table][1,number]==IndexA){
+                
+                Out = I
+                
+            }
+            
+        }
+
+        return Out
+        
+    }
+        
+    function pushIndex(Type,ParentEnt:entity,Thickness){
+        #Type is either 1 for area/poly or 2 for portals/global
+        
+        local Table = Indexes[Type,table]
+        local Index = Table:count()
+        local Offset = 1000+500*Type
+        local HoloIndex = Offset + Table[Table:count(),number]
+        local Value = Index + 1
+        local Numbers = Value:toString():explode("")
+        local NumCount = Numbers:count()
+        
+        for(I = 1,NumCount){
+
+            HoloIndex += 1
+            
+            holoCreate(HoloIndex)
+            holoParent(HoloIndex,ParentEnt)
+            holoPos(HoloIndex,ParentEnt:toWorld(vec(1+NumCount-2*I,0,0)))
+            holoAng(HoloIndex,ParentEnt:toWorld(ang(0,0,90)))
+            holoModel(HoloIndex,"models/sprops/misc/alphanum/alphanum_"+Numbers[I,string]+".mdl")
+            holoScale(HoloIndex,vec(0.2,Thickness,0.2))
+            holoMaterial(HoloIndex,"models/debug/debugwhite")
+            holoColor(HoloIndex,vec())
+        
+        }
+
+        Table:pushNumber(HoloIndex-Offset)
+
+    }    
+    
+    function popIndex(Type){
+        
+        local Table = Indexes[Type,table]
+                
+        local Index = Table:count()
+        local Numbers = Index:toString():explode("")
+        local NumCount = Numbers:count()
+        local Offset = 1000+500*Type
+        local HoloIndex = Offset + Table:popNumber() - NumCount
+
+        for(I = 1,NumCount){
+
+            HoloIndex += 1
+    
+            holoDelete(HoloIndex)
+            
+        }        
+        
+    }
+
+    function deparentIndex(Type){
+        
+        local Table = Indexes[Type,table]
+                
+        local Index = Table:count()
+        local Numbers = Index:toString():explode("")
+        local NumCount = Numbers:count()
+        local Offset = 1000+500*Type
+        local HoloIndex = Offset + Table[Table:count(),number] - NumCount
+
+        for(I = 1,NumCount){
+
+            HoloIndex += 1
+    
+            holoParent(HoloIndex,entity())
+            holoPos(HoloIndex,entity():pos())
+            
+        }        
+        
+    }
+
+    function thiccIndex(Type,Entry,Thickness){
+        
+        local Table = Indexes[Type,table]
+                
+        local Numbers = (Portals:count()+1):toString():explode("")
+        local NumCount = Numbers:count()
+        local Offset = 1000+500*Type
+        local HoloIndex = Offset + Table[Portals:count()+1,number] - NumCount
+
+        for(I = 1,NumCount){
+
+            HoloIndex += 1
+            
+            holoScale(HoloIndex,vec(0.2,Thickness/1.5,0.2))
+            
+        }        
+        
+    }
+    
+    function reparentIndex(Type,Entry,ParentEnt:entity,Thickness){
+
+        local Table = Indexes[Type,table]
+
+        local Numbers = localGlobal(Entry):toString():explode("")
+        local NumCount = Numbers:count()
+        local Offset = 1000+500*Type
+        local HoloIndex = Offset + Table[localGlobal(Entry),number] - NumCount
+        
+        for(I = 1,NumCount){
+
+            HoloIndex += 1
+                        
+            holoParent(HoloIndex,ParentEnt)
+            holoPos(HoloIndex,ParentEnt:toWorld(vec(1+NumCount-2*I,0,0)))
+            holoAng(HoloIndex,ParentEnt:toWorld(ang(0,0,90)))
+            holoScale(HoloIndex,vec(0.2,Thickness,0.2))
+            
+        }        
+        
+    }
+    
+    function updateTables(){
+            
+        Areas:clear()
+        Polygons:clear()
+        Portals:clear()
+        Selectable:clear()
+        PolyImport:clear()
+        RenderPortals:clear()
+        
+        for(I = 1,Map:count()){
+            
+            T = Map[I,table]
+            
+            String = T[2,string]
+            
+            switch(String){
+                
+                case "area",
+                    
+                    Areas:pushTable(T)
+                    Selectable:pushTable(T)
+                    
+                break
+
+                case "poly",
+                    
+                    Polygons:pushTable(T)
+                    Selectable:pushTable(T)
+
+                    Vertices = T[4,array]
+                    
+                    for(J = 3,Vertices:count()){
+                        
+                        PolyImport:pushArray(array(T[3,entity],Vertices[J-1,vector],Vertices[J,vector]))
+                        
+                    }         
+                               
+                break
+                
+                case "global",
+                
+                    Portals:pushTable(T)
+                
+                break
+                                
+                case "portal",
+                    
+                    Portals:pushTable(T)
+
+                    if(Map[T[3,number],table][3,entity] != Map[T[4,number],table][3,entity]){
+                        
+                        local E = T:clone()
+                        E:pushNumber(Portals:count())
+
+                        RenderPortals:pushTable(E)
+
+                    }
+                    
+                break
+                
+            }
+            
+        }      
+        
+    }
+
+    function deletePortal(Global){
+        
+        deparentIndex(1)
+
+        holoDelete(Map:count())
+
+        popIndex(2)
+
+        Map:removeTable(Global)
+        for(I = 498+Portals:count()*2,499+Portals:count()*2){
+            
+            holoDelete(I)
+            
+        }        
+                
+        for(I=Global,Map:count()){
+            
+            J = Map[I,table]
+            
+            J[1,number] = J[1,number] -1
+            
+            if(J[2,string]=="portal"){
+                
+                if(J[3,number]>Global){
+                    
+                    J[3,number] = J[3,number] -1
+                    
+                }
+                if(J[4,number]>Global){
+                    
+                    J[4,number] = J[4,number] -1
+                    
+                }
+                
+            }
+            elseif(J[2,string]=="global"&J[3,number]>Global){
+                
+                J[3,number] = J[3,number] -1
+                        
+            }            
+
+        }
+        
+    }
+    
+    function deleteZone(Local){#this was one of the worst things to program you don't even know
+
+        Global = Selectable[Local,table][1,number]
+
+        deparentIndex(2)
+
+        holoDelete(Map:count())
+
+        popIndex(1)
+
+        Map:removeTable(Global)   #Delete the selected entry
+        
+        for(I=Global,Map:count()){  #Mark all entries after the selected entry
+            
+            J = Map[I,table]
+            
+            J[1,number] = J[1,number] -1 #Lower all indexes 
+            
+            if(J[2,string]=="portal"){
+                
+                if(J[3,number] == Global | J[4,number] == Global){  #If a portal is linked to the deleted entry, delete that portal
+                    
+                    DeleteQuery:pushNumber(I)
+
+                }
+                             
+                if(J[3,number]>Global){   #If the portal refers to an index higher than the deleted one, lower it
+                    
+                    J[3,number] = J[3,number] -1
+                    
+                }
+                
+                if(J[4,number]>Global){   #If the portal refers to an index higher than the deleted one, lower it
+                    
+                    J[4,number] = J[4,number] -1
+                    
+                }
+                
+            }
+            elseif(J[2,string]=="global"){
+                
+                if(J[3,number] == Global){  #If a portal is linked to the deleted entry, delete that portal
+                    
+                    DeleteQuery:pushNumber(I)
+
+                }
+                             
+                if(J[3,number]>Global){   #If the portal refers to an index higher than the deleted one, lower it
+                    
+                    J[3,number] = J[3,number] -1
+                    
+                }
+                
+            }  
+                      
+        }
+        if(Selectable[Local,table][2,string] == "poly"){
+            
+            for(I=1,Selectable[Local,table][4,array]:count()-2){
+                
+                holoDelete(1000+PCount)
+                PCount -= 1
+                
+            }
+            
+        }
+
+        timer("delete",100)
+
+#[        for(I=1,DeleteQuery:count()){
+            
+            updateTables()
+            deletePortal(DeleteQuery[I,number]-I+1)   #Delete the portals after the previous loops are done, for simplicity sake
+            
+        }
+        
+        DeleteQuery = array()]#
+                    
+    }
+    
+    interval(100)
+
+}
+elseif(clk("delete")){
+
+    updateTables()
+
+    deletePortal(DeleteQuery:popNumber())
+            
+    if(DeleteQuery:count()!=0){
+        
+        timer("delete",1000)
+    
+    }
+    else{
+        
+        updateTables()
+        
+        Spawn = XCount = PCount = Wave = 0
+        Wave2 = 1
+        
+        timer("import",1000)
+        
+    }
+    
+}
+elseif(clk("import")){
+    
+    if(Spawn){
+    
+        Wave+=3
+    
+    }
+    else{
+        
+        Wave+=20
+        
+    }
+    
+    for(I=Wave2,min(Wave,(Map:count()+PolyImport:count()))){
+
+        if(I <= Map:count()){
+
+            String = Map[I,table][2,string]
+            
+            switch(String){
+                
+                case "area",
+
+                    A = Map[I,table]
+                    local AP = A[3,entity]
+    
+                    if(Spawn){
+                        
+                        holoCreate(I)
+                        pushIndex(1,holoEntity(I),0.4)
+
+                    }
+                    else{
+                        
+                        reparentIndex(1,I,holoEntity(I),0.4)
+                        
+                    }
+
+                    holoModel(I,"models/hunter/blocks/cube2x2x2.mdl")
+                    holoMaterial(I,"models/debug/debugwhite")
+                    holoDisableShading(I,0)
+                    holoParent(I,AP)
+                    holoColor(I,vec4(50,200,100,255))
+                    holoPos(I,AP:toWorld(A[4,vector]))
+                    holoAng(I,AP:toWorld(ang()))
+                    holoScale(I,A[5,vector]/96+vec(0,0,0.01))
+                    
+                break
+    
+                case "poly",
+                    
+                    P = Map[I,table]
+                    local AP = P[3,entity]
+    
+                    if(Spawn){
+                        
+                        holoCreate(I)
+                        pushIndex(1,holoEntity(I),1)
+                        
+                    }
+                    else{
+                        
+                        reparentIndex(1,I,holoEntity(I),1)
+                        
+                    }
+                    
+                    holoInterpolate(I,P[3,entity],P[4,array][1,vector],P[4,array][2,vector])
+                    holoModel(I,"models/hunter/blocks/cube2x2x2.mdl")
+                    holoMaterial(I,"models/debug/debugwhite")
+                    holoDisableShading(I,0)
+                    holoParent(I,AP)
+                    holoColor(I,vec4(50,200,100,255))
+                                                             
+                break
+    
+                case "portal",
+                    
+                    local X = Map[I,table]
+                    local A1 = Map[X[3,number],table]
+                    local A2 = Map[X[4,number],table]
+    
+                    local AP1 = A1[3,entity]
+                    local AP2 = A2[3,entity]
+                    
+                    Point1 = 500+XCount
+                    Point2 = 501+XCount
+                    
+                    if(Spawn){
+                        
+                        holoCreate(I)
+                        holoCreate(Point1)
+                        holoCreate(Point2)
+                        pushIndex(2,holoEntity(I),1)
+                        
+                    }
+                    else{
+                        
+                        reparentIndex(2,I,holoEntity(I),1)
+                        
+                    }
+
+                    holoParent(I,AP1)
+                    holoColor(I,vec4(255,0,255,255))                    
+                    holoScale(I,vec(0.1))
+                    holoModel(I,"models/hunter/blocks/cube2x2x2.mdl")
+                    holoMaterial(I,"models/debug/debugwhite")
+                    holoDisableShading(I,0)
+                    
+                    holoParent(Point1,AP1)
+                    holoAng(Point1,AP1:toWorld(ang()))
+                    holoModel(Point1,"hqsphere")
+                    holoScale(Point1,vec(X[7,number]/6))
+                    holoColor(Point1,vec4(255,0,255,255))
+                    holoDisableShading(Point1,0)
+                    
+                    holoParent(Point2,AP2)
+                    holoAng(Point2,AP2:toWorld(ang()))
+                    holoModel(Point2,"hqsphere")
+                    holoScale(Point2,vec(X[8,number]/6))
+                    holoColor(Point2,vec4(255,0,255,255))
+                    holoDisableShading(Point2,0)
+    
+                    if(A1[2,string] == "area"){
+                        
+                        holoPos(Point1,AP1:toWorld(X[5,vector]))
+                        
+                    }
+                    else{
+                        
+                        CP = floor(X[5,number])
+                        Coefficient = X[5,number] - CP
+                        
+                        Pos1 = A1[4,array][CP+1,vector]
+                        Pos2 = A1[4,array][CP+2,vector]
+                        
+                        holoPos(Point1,A1[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                        
+                    }
+                    
+                    if(A2[2,string] == "area"){
+                        
+                        holoPos(Point2,AP2:toWorld(X[6,vector]))
+                        
+                    }
+                    else{
+
+                        CP = floor(X[6,number])
+                        Coefficient = X[6,number] - CP
+                        
+                        Pos1 = A2[4,array][CP+1,vector]
+                        Pos2 = A2[4,array][CP+2,vector]
+                        
+                        holoPos(Point2,A2[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                        
+                    }
+                    
+                    holoInterpolate(I,holoEntity(Point1):pos(),holoEntity(Point2):pos())
+                    
+                    XCount += 2
+      
+                break
+    
+                case "global",
+                    
+                    local X = Map[I,table]
+                    local A1 = Map[X[3,number],table]
+    
+                    local AP1 = A1[3,entity]
+                                        
+                    Point1 = 500+XCount
+                    Point2 = 501+XCount
+                    
+                    Radius = X[6,number]
+    
+                    if(Spawn){
+                        
+                        holoCreate(I)
+                        holoCreate(Point1)
+                        holoCreate(Point2)
+                        pushIndex(2,holoEntity(I),Map[I,table][5,number]/1.5)
+                        
+                    }
+                    else{
+                        
+                        reparentIndex(2,I,holoEntity(I),Map[I,table][5,number]/1.5)
+                        
+                    }    
+    
+                    holoMaterial(I,"models/debug/debugwhite")
+                    holoDisableShading(I,0)                                    
+                    holoParent(I,AP1)
+                    holoAng(I,AP1:toWorld(ang()))
+                    holoModel(I,"hqsphere")
+                    holoColor(I,vec(255,255,0))                    
+                    holoScale(I,vec(X[5,number]/6))
+    
+                    holoModel(Point1,"hqsphere")
+                    holoPos(Point1,holoEntity(I):pos())
+                    holoParent(Point1,I)
+                    holoScale(Point1,vec(Radius/6))
+                    holoDisableShading(Point1,1)
+                    holoColor(Point1,vec4(255,255,255,5))
+                
+                    holoModel(Point2,"hqsphere")
+                    holoPos(Point2,holoEntity(I):pos())
+                    holoParent(Point2,I)
+                    holoScale(Point2,vec(-Radius/6))
+                    holoDisableShading(Point2,1)
+                    holoColor(Point2,vec4(255,255,255,5))
+        
+                    if(A1[2,string] == "area"){
+                        
+                        holoPos(I,AP1:toWorld(X[4,vector]))
+                        
+                    }
+                    else{
+                        
+                        CP = floor(X[4,number])
+                        Coefficient = X[4,number] - CP
+                        
+                        Pos1 = A1[4,array][CP+1,vector]
+                        Pos2 = A1[4,array][CP+2,vector]
+                        
+                        holoPos(I,A1[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                        
+                    }
+    
+                    
+                    XCount += 2
+      
+                break
+                
+            }
+      
+        }
+        else{
+            
+            I -= Map:count()-1000
+            
+            P = Map[I,table]
+
+            if(Spawn){
+                
+                holoCreate(I)
+                
+            }
+
+            Array = PolyImport[I-1000,array]
+            holoInterpolate(I,Array[1,entity],Array[2,vector],Array[3,vector])
+            holoModel(I,"models/hunter/blocks/cube2x2x2.mdl")
+            holoMaterial(I,"models/debug/debugwhite")
+            holoDisableShading(I,0)
+            holoParent(I,Array[1,entity])
+            holoColor(I,vec4(50,200,100,255))
+
+            PCount += 1
+
+        }
+        
+    }
+    
+    Wave2 = Wave + 1
+    
+    if(Wave<(Map:count()+PolyImport:count())){
+        
+        timer("import",1000)
+
+        
+    }
+    else{
+                
+        Spawn = 0
+        updateTables()
+        print("Map rendered.")
+        O:soundPlay(1,0,SoundDone)
+
+    }
+
+
+}
+
+elseif(clk()){
+    
+    interval(100)
+    
+    local Crowbar = O:weapon():type() == "weapon_crowbar"    
+    
+    for(I=1,RenderPortals:count()){
+        
+        X = RenderPortals[I,table]
+        
+        holoInterpolate(X[1,number],holoEntity(498+X[11,number]*2):pos(),holoEntity(499+X[11,number]*2):pos())
+        
+    }    
+    
+    if(Crowbar){
+        
+        AimEnt = !owner():aimEntity():isPlayer() ? owner():aimEntity() : noentity()
+        AimPos = owner():aimPos()
+        AimPosLocal = round(Temp[3,entity]:toLocal(O:aimPos()),1)
+        
+        switch(Step){
+            
+            case "area1",
+            case "poly1",
+            
+                if(changed(AimEnt)){
+                    
+                    holoModel(IndexA,AimEnt:model())
+                    holoPos(IndexA,AimEnt:pos())
+                    holoAng(IndexA,AimEnt:angles())
+                    
+                }        
+            
+            break    
+            
+            case "area2",
+            case "poly2",
+                
+                if(changed(AimPos)){
+                    
+                    holoPos(IndexA,AimPos)
+                    
+                }
+                
+            break
+            
+            case "area3",
+                
+                holoPos(IndexA,Temp[3,entity]:toWorld(mix(Temp[4,vector],AimPosLocal,0.5)))
+                holoScale(IndexA,positive(positive(Temp[4,vector]-AimPosLocal)/96+vec(0.01)))
+                
+            break
+            
+            case "area4",
+                
+                holoPos(IndexA,Temp[3,entity]:toWorld(mix(Temp[4,vector],Temp[5,vector],0.5)*vec(1,1,0)+vec(0,0,AimPosLocal:z())))
+                
+            break
+            
+            case "poly3",
+                
+                Vertices = Temp[4,array]
+                holoInterpolate(IndexA,Temp[3,entity],Vertices[1,vector],AimPosLocal)
+
+                Pitch = angnorm((Vertices[1,vector] - AimPosLocal):toAngle()):pitch()
+                if(Pitch>45|Pitch<-45){
+                    
+                    holoColor(IndexA,vec(255,0,0))
+                    
+                }
+                else{
+                    
+                    holoColor(IndexA,vec(255))
+                    
+                }
+
+            break
+
+            case "poly4",
+                
+                Vertices = Temp[4,array]
+                holoInterpolate(IndexA,Temp[3,entity],Vertices[Vertices:count(),vector],AimPosLocal)
+                
+                Pitch = angnorm((Vertices[Vertices:count(),vector] - AimPosLocal):toAngle()):pitch()
+                if(Pitch>45|Pitch<-45){
+                    
+                    holoColor(IndexA,vec(255,0,0))
+                    
+                }
+                else{
+                    
+                    holoColor(IndexA,vec(255))
+                    
+                }
+
+            break
+            
+            case "portal1",
+                
+                Selected = Selectable[SelZone,table]
+                
+                AimPosLocalSelected = round(Selected[3,entity]:toLocal(O:aimPos()),1)
+                
+                if(Selected[2,string] == "area"){
+                    
+                    local Pos = Selected[4,vector]
+                    local Scale = Selected[5,vector]
+                    
+                    holoPos(IndexB,Selected[3,entity]:toWorld(areaClamp(Pos,Scale,AimPosLocalSelected)))
+                    
+                }
+                else{
+                    
+                    CP = closestPoint(Selected[3,entity],AimPosLocalSelected,Selected[4,array])
+                    
+                    Pos1 = Selected[4,array][CP,vector]
+                    Pos2 = Selected[4,array][CP+1,vector]
+
+                    Coefficient = linePoint(Pos1,Pos2,AimPosLocalSelected)
+                    
+                    holoPos(IndexB,Selected[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                    
+                }
+                
+            break
+            
+            case "portal2",
+                
+                Selected = Selectable[SelZone,table] # move this to key
+                
+                AimPosLocalSelected = round(Selected[3,entity]:toLocal(O:aimPos()),1)
+
+                holoInterpolate(IndexA,holoEntity(IndexB):pos(),holoEntity(IndexC):pos())
+                
+                if(Selected[2,string] == "area"){
+                    
+                    local Pos = Selected[4,vector]
+                    local Scale = Selected[5,vector]
+                    
+                    holoPos(IndexC,Selected[3,entity]:toWorld(areaClamp(Pos,Scale,AimPosLocalSelected)))
+                    
+                }
+                else{
+                    
+                    CP = closestPoint(Selected[3,entity],AimPosLocalSelected,Selected[4,array])
+                    
+                    Pos1 = Selected[4,array][CP,vector]
+                    Pos2 = Selected[4,array][CP+1,vector]
+
+                    Coefficient = linePoint(Pos1,Pos2,AimPosLocalSelected)
+                    
+                    holoPos(IndexC,Selected[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                    
+                }
+                                
+            break
+
+            case "global1",
+                
+                Selected = Selectable[SelZone,table] # move this to key
+                
+                AimPosLocalSelected = round(Selected[3,entity]:toLocal(O:aimPos()),1)
+                
+                if(Selected[2,string] == "area"){
+                    
+                    local Pos = Selected[4,vector]
+                    local Scale = Selected[5,vector]
+                    
+                    holoPos(IndexA,Selected[3,entity]:toWorld(areaClamp(Pos,Scale,AimPosLocalSelected)))
+                    
+                }
+                else{
+                    
+                    CP = closestPoint(Selected[3,entity],AimPosLocalSelected,Selected[4,array])
+                    
+                    Pos1 = Selected[4,array][CP,vector]
+                    Pos2 = Selected[4,array][CP+1,vector]
+
+                    Coefficient = linePoint(Pos1,Pos2,AimPosLocalSelected)
+                    
+                    holoPos(IndexA,Selected[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                    
+                }
+                
+            break
+            
+        }
+        
+    }
+
+}
+
+elseif(chatClk(O)){
+    
+    local Crowbar = O:weapon():type() == "weapon_crowbar"
+    local LS = O:lastSaid()
+    local Words = LS:explode(" ")
+    
+    local Word1 = Words[1,string]
+
+    
+    if(Word1 == "-c"){
+    
+        hideChat(1)
+    
+        local Word2 = Words[2,string]
+    
+        if(Crowbar&!Spawn){
+        
+            switch(Word2){
+                
+                case "a",
+                case "area",
+
+                    if(!Editing){
+                    
+                        O:soundPlay(1,0,SoundConfirm)
+                        Editing = 1
+                        IndexA = Map:count() + 1
+                        Step = "area1"
+                        Temp = table(IndexA,"area")
+                    
+                    }
+                    else{
+                    
+                        print("Error! You are already creating something. Press R with the crowbar to undo/cancel.")
+                        O:soundPlay(1,0,SoundFail)
+                    
+                    }                
+            
+                break
+
+                case "p",
+                case "poly",
+
+                    if(!Editing){
+                    
+                        O:soundPlay(1,0,SoundConfirm)
+                        Editing = 1
+                        IndexA = Map:count() + 1
+                        Step = "poly1"
+                        Temp = table(IndexA,"poly",0,array())
+                    
+                    }
+                    else{
+                    
+                        print("Error! You are already creating something. Press R with the crowbar to undo/cancel.")
+                        O:soundPlay(1,0,SoundFail)
+                    
+                    }                
+                    
+                break
+
+                case "x",
+                case "portal",
+                    
+                    if(!Editing&Map:count()>0){
+                        
+                        O:soundPlay(1,0,SoundConfirm)
+                        Editing = 1
+                        IndexA = Map:count() + 1
+                        IndexB = 500 + Portals:count()*2
+                        IndexC = 501 + Portals:count()*2
+                        Step = "portal1"
+                        Temp = table(IndexA,"portal",0,0,0,0,6,6,1,0)
+                        
+                    }
+                    elseif(Editing){
+                    
+                        print("Error! You are already creating something. Press R with the crowbar to undo/cancel.")
+                        O:soundPlay(1,0,SoundFail)
+                    
+                    }
+                     else{
+                        
+                        print("Error! You need at least one area/poly to create a portal.")
+                        O:soundPlay(1,0,SoundFail)
+                        
+                    }                           
+                    
+                break
+                
+                case "global",
+                case "g",
+                    
+                    if(!Editing&Map:count()>0){
+                        
+                        O:soundPlay(1,0,SoundConfirm)
+                        Editing = 1
+                        IndexA = Map:count() + 1
+
+                        IndexB = 500 + Portals:count()*2
+                        IndexC = 501 + Portals:count()*2
+
+                        Step = "global1"
+                        Temp = table(IndexA,"global",0,0,6,120)
+                        
+                    }
+                    elseif(Editing){
+                    
+                        print("Error! You are already creating something. Press R with the crowbar to undo/cancel.")
+                        O:soundPlay(1,0,SoundFail)
+                    
+                    }
+                     else{
+                        
+                        print("Error! You need at least one area/poly to create a portal.")
+                        O:soundPlay(1,0,SoundFail)
+                        
+                    }                     
+                    
+                break
+
+                case "n",
+                case "node",
+                    
+                    local Word3 = Words[3,string]
+                    local Word3Num = Word3:toNumber()
+                    
+                    if(Step == "portal1"){
+                        
+                        O:soundPlay(1,0,SoundConfirm)
+                        Temp[7,number] = Word3Num
+                        holoScale(IndexB,vec(Word3Num/6))
+                        
+                    }                        
+                    elseif(Step == "portal2"){
+                    
+                        O:soundPlay(1,0,SoundConfirm)
+                        Temp[8,number] = Word3Num
+                        holoScale(IndexC,vec(Word3Num/6))
+                    
+                    }                        
+                    elseif(Step == "global1"){
+                        
+                        O:soundPlay(1,0,SoundConfirm)
+                        Temp[5,number] = Word3Num
+                        holoScale(IndexA,vec(Word3Num/6))  
+                        thiccIndex(2,IndexA,Word3Num)                      
+                        
+                    }
+                    else{
+                        
+                        O:soundPlay(1,0,SoundFail)
+                        print("Error! You can only change node sizes while creating portals or global portals.")
+                        
+                    }       
+                                     
+                break
+
+                case "r",
+                case "radius",
+                    
+                    local Word3 = Words[3,string]
+                    local Word3Num = Word3:toNumber()
+                                       
+                    if(Step == "global1"){
+                        
+                        if(Word3Num > 300){
+                            
+                            O:soundPlay(1,0,SoundFail)
+                            print("Error! Max radius size is 300.")                            
+                            
+                        }
+                        else{
+                            
+                            O:soundPlay(1,0,SoundConfirm)
+                            Temp[6,number] = Word3Num
+                            holoScale(IndexB,vec(Word3Num/6))                        
+                            holoScale(IndexC,vec(-Word3Num/6))                        
+                        
+                        }
+                    
+                    }
+                    else{
+                        
+                        O:soundPlay(1,0,SoundFail)
+                        print("Error! You can only change radius sizes while creating global portals.")
+                        
+                    }       
+                                     
+                break
+                
+                case "e",
+                case "export",
+                    
+                    if(!Editing){
+
+                        ExportMap = Map:clone()
+                        print("Exporting...")
+                        
+                        Wave = 0
+                        Wave2 = 1
+                        O:soundPlay(1,0,"ambient/levels/labs/equipment_printer_loop1.wav")
+                        
+                        timer("export1",100)
+                        
+                    }
+                    else{
+                        
+                        print("Error! Finish or cancel before exporting.")
+                        O:soundPlay(1,0,SoundFail)
+                        
+                    }                        
+                    
+                break
+                
+                case "u",
+                case "undo",
+                    
+                    if(Map:count()){
+                        
+                        Undo = Map:popTable()
+                        
+                        String = Undo[2,string]
+                    
+                        switch(String){
+                            
+                            case "area",
+                            
+                                popIndex(1)
+                                
+                            break
+                            
+                            case "poly",
+                                
+                                popIndex(1)
+
+                                for(I=1,Undo[4,array]:count()-2){
+                                    
+                                    holoDelete(1000+PCount)
+                                    PCount -= 1
+                                    
+                                }
+                
+                            break
+  
+                            case "global",
+                            case "portal",
+                                
+                                popIndex(2)
+                                
+                                for(I = 498+Portals:count()*2,499+Portals:count()*2){
+                                    
+                                    holoDelete(I)
+                                    
+                                }
+                                
+                            break
+                            
+                        }
+                        
+                        holoDelete(Undo[1,number])
+                        updateTables()
+                        
+                        O:soundPlay(1,0,SoundDone)
+                        print("Undone.")
+                        
+                    }
+                    else{
+                    
+                        O:soundPlay(1,0,SoundFail)
+                        print("There is nothing to undo.")
+                    
+                    }             
+                               
+                break
+                
+                case "s",
+                case "sel",
+                    
+                    if(Step == "portal1" | Step == "portal2"){
+                        
+                        local Word3 = Words[3,string]
+                        local Word3Num = Word3:toNumber()
+                        
+                        if(Word3Num > 0 & Word3Num <= Selectable:count()){
+                            
+                            SelZone = Word3Num
+                            
+                            for(I=1,Selectable:count()){
+                                
+                                SelectableColor = Selectable[I,table][1,number]
+                                
+                                holoColor(SelectableColor,SelZone==I ? vec(50,100,200) :    vec(50,200,100))
+                                
+                            }
+        
+                            Selected = Selectable[Word3Num,table]
+                                    
+                            for(I=1,PCount){
+                                
+                                if(Selected[2,string] == "poly"&I>=Selected[5,number]&I<Selected[5,number]+Selected[4,array]:count()-1){
+                                    
+                                    holoColor(1000+I,vec(50,100,200))
+                                    
+                                }
+                                else{
+                                    
+                                    holoColor(1000+I,vec(50,200,100))
+                                    
+                                }
+                                
+                            }    
+                                                    
+                        }
+                        else{
+                            
+                            O:soundPlay(1,0,SoundFail)
+                            print("Error! Area "+Word3+" does not exist!")
+                            
+                            }
+                        
+                    }
+                    else{
+                        
+                        O:soundPlay(1,0,SoundFail)
+                        print("Error! You can only select areas when making portal nodes.")
+                        
+                    }
+                    
+                break
+                
+                case "d",
+                case "del",
+                case "delete",
+                    
+                    local Word3 = Words[3,string]
+                    local Word4 = Words[4,string]
+                    local Word4Num = Word4:toNumber()
+                    
+                    if(Word3 == "portal" | Word3 == "x"){
+                        
+                        if(Word4Num>0&Word4Num<=Portals:count()){
+                            
+                            deletePortal(Portals[Word4Num,table][1,number])
+
+                            updateTables()
+                            
+                            Spawn = XCount = PCount = Wave = 0
+                            Wave2 = 1
+                            
+                            timer("import",0)
+
+                            O:soundPlay(1,0,"ambient/levels/labs/equipment_printer_loop1.wav")
+                            print("Rerendering map. Do not panic.")
+                            
+                        }
+                        else{
+                            
+                            print("Error! You can only delete a portal between 1 and "+Portals:count())
+                            
+                        }
+                        
+                    }
+                    elseif(Word3 == "zone" | Word3 == "z"){
+                        
+                        if(Word4Num > 0 & Word4Num <= Selectable:count()){
+                            
+                            deleteZone(Word4Num)
+
+                            O:soundPlay(1,0,"ambient/levels/labs/equipment_printer_loop1.wav")
+                            print("Rerendering map. Do not panic.")
+                            
+                        }                        
+                        else{
+                            
+                            print("Error! You can only delete an area between 1 and "+Selectable:count())
+                            
+                        }
+                                                
+                    }
+                    else{
+                        
+                        print("Error! You can only delete areas or portals. (area|portal)")
+                        
+                    }                    
+                    
+                break
+                
+                default,
+                
+                    O:soundPlay(1,0,SoundFail)
+                    print("Error! Invalid input.")
+                    
+                break
+
+           }
+        
+        }
+        else{
+            
+            if(!Crowbar){
+                
+                print("Error! You must be holding the crowbar to create.")
+            }
+            elseif(Spawn){
+                
+                print("Error! Wait for the map to be imported/rerendered.")
+                
+            }
+            
+            O:soundPlay(1,0,SoundFail)
+            
+        }
+        
+    }  
+
+}
+
+elseif(changed(Step)){
+    
+    switch(Step){
+        
+        case "area1",
+        case "poly1",
+            
+            print("You are now creating "+( Step == "area1" ? "an area" : "a polygon")+". Left click the parent entity. Press R to cancel. Right click to select the previous used parent entity.")
+            
+            local AimEnt = !owner():aimEntity():isPlayer() ? owner():aimEntity() : noentity()
+            
+            holoCreate(IndexA)
+            holoMaterial(IndexA,"models/debug/debugwhite")
+            holoColor(IndexA,vec(50,200,100))
+            holoScale(IndexA,vec(1.01))
+            
+            holoModel(IndexA,AimEnt:model())
+            holoPos(IndexA,AimEnt:pos())
+            holoAng(IndexA,AimEnt:angles())
+            
+        break
+        
+        case "area2",
+        case "poly2",
+            
+            print("Left click one end of the "+( Step == "area2" ? "area" : "polygon")+" to start. Press R to undo.")
+
+            holoParent(IndexA,Temp[3,entity])
+            holoAng(IndexA,Temp[3,entity]:angles())
+            holoModel(IndexA,"sphere")
+            holoScale(IndexA,vec(0.2))
+            
+        break
+        
+        case "area3",
+        
+            print("Left click the other end of the area. Press R to undo.")
+            
+            holoModel(IndexA,"models/hunter/blocks/cube2x2x2.mdl")
+            
+        break        
+                
+        case "area4",
+            
+            print("Choose the height of the area. (Usually by left clicking the ground) Press R to undo.")
+            
+            holoScale(IndexA,holoScale(IndexA)*vec(1,1,0)+vec(0,0,0.01))     
+            
+        break
+        
+        case "portal1",
+            
+            print("You are now creating a portal. Right click to cycle through areas. Type '-c node <number>' to change the node radius. Type '-c sel <number>' to select area. Left click to place a node. Press R to cancel.")
+            
+            SelZone = 1
+
+            holoCreate(IndexA)
+            holoMaterial(IndexA,"models/debug/debugwhite")
+            holoScale(IndexA,vec(0.1))
+            holoModel(IndexA,"models/hunter/blocks/cube2x2x2.mdl")
+            
+            holoCreate(IndexB)
+            holoModel(IndexB,"hqsphere")
+            holoParent(IndexB,holoEntity(Selectable[SelZone,table][1,number]))
+            holoAng(IndexB,holoEntity(Selectable[SelZone,table][1,number]):toWorld(ang()))
+            
+            holoCreate(IndexC)
+            holoModel(IndexC,"hqsphere")
+                        
+            for(I=1,Selectable:count()){
+                
+                SelectableColor = Selectable[I,table][1,number]
+                
+                holoColor(SelectableColor,SelZone==I ? vec(50,100,200) :    vec(50,200,100))
+                
+            }
+
+            Selected = Selectable[SelZone,table]
+            
+            for(I=1,PCount){
+                
+                if(Selected[2,string] == "poly"&I>=Selected[5,number]&I<Selected[5,number]+Selected[4,array]:count()-1){
+                    
+                    holoColor(1000+I,vec(50,100,200))
+                    
+                }
+                else{
+                    
+                    holoColor(1000+I,vec(50,200,100))
+                    
+                }
+                
+            }              
+            
+        break
+        
+        case "portal2",
+            
+            print("Now select the other side of the portal. Right click to cycle through areas. Type '-c node <number>' to change the node radius. Type '-c sel <number>' to select area. Press R to cancel.")
+            
+            SelZone = 1
+
+            holoParent(IndexC,holoEntity(Selectable[SelZone,table][1,number]))
+            holoAng(IndexC  ,holoEntity(Selectable[SelZone,table][1,number]):toWorld(ang()))
+            
+            for(I=1,Selectable:count()){
+                
+                SelectableColor = Selectable[I,table][1,number]
+                
+                holoColor(SelectableColor,SelZone==I ? vec(50,100,200) :    vec(50,200,100))
+                
+            }
+
+            Selected = Selectable[SelZone,table]
+            
+            for(I=1,PCount){
+                
+                if(Selected[2,string] == "poly"&I>=Selected[5,number]&I<Selected[5,number]+Selected[4,array]:count()-1){
+                    
+                    holoColor(1000+I,vec(50,100,200))
+                    
+                }
+                else{
+                    
+                    holoColor(1000+I,vec(50,200,100))
+                    
+                }
+                
+            }              
+            
+        break
+
+        case "global1",
+            
+            print("You are now creating a global portal. Right click to cycle through areas. Type '-c node <number>' to change the node radius. Type '-c radius <number>' to change the search radius.")
+            print("Type '-c sel <number>' to select area. Left click to place a node. Press R to cancel.")
+                        
+            Radius = Temp[6,number]
+            Node = Temp[5,number]
+            SelZone = 1
+            
+            holoCreate(IndexA)
+            holoParent(IndexA,holoEntity(Selectable[SelZone,table][1,number]))
+            holoAng(IndexA,holoEntity(Selectable[SelZone,table][1,number]):toWorld(ang()))
+            holoMaterial(IndexA,"models/debug/debugwhite")
+            holoModel(IndexA,"hqsphere")
+            holoScale(IndexA,vec(Node/6))
+
+            holoCreate(IndexB)
+            holoModel(IndexB,"hqsphere")
+            holoParent(IndexB,IndexA)
+            holoScale(IndexB,vec(Radius/6,Radius/6,Radius/6))
+            holoDisableShading(IndexB,1)
+            holoAlpha(IndexB,5)
+            
+            holoCreate(IndexC)
+            holoModel(IndexC,"hqsphere")
+            holoParent(IndexC,IndexA)
+            holoScale(IndexC,vec(-Radius/6,Radius/6,Radius/6))
+            holoDisableShading(IndexC,1)
+            holoAlpha(IndexC,5)
+                    
+            for(I=1,Selectable:count()){
+                
+                SelectableColor = Selectable[I,table][1,number]
+                
+                holoColor(SelectableColor,SelZone==I ? vec(50,100,200) :    vec(50,200,100))
+                
+            }      
+                  
+            Selected = Selectable[SelZone,table]
+            
+            for(I=1,PCount){
+                
+                if(Selected[2,string] == "poly"&I>=Selected[5,number]&I<Selected[5,number]+Selected[4,array]:count()-1){
+                    
+                    holoColor(1000+I,vec(50,100,200))
+                    
+                }
+                else{
+                    
+                    holoColor(1000+I,vec(50,200,100))
+                    
+                }
+                
+            }  
+            
+            pushIndex(2,holoEntity(IndexA),4)            
+            
+        break
+        
+    }
+    
+}
+
+if(keyClk()){
+    
+    local Crowbar = O:weapon():type()=="weapon_crowbar"
+    local M1 = changed(O:keyAttack1())&O:keyAttack1()
+    local M2 = changed(O:keyAttack2())&O:keyAttack2()
+    local R = changed(O:keyPressed("R"))&O:keyPressed("R")    
+    
+    if(Crowbar&(M1+M2+R)){
+        
+        local AimPosLocal = round(Temp[3,entity]:toLocal(O:aimPos()),1)
+        AimEnt = !owner():aimEntity():isPlayer() ? owner():aimEntity() : noentity()
+        
+        switch(Step){
+            
+            case "poly1",
+            case "area1",
+                
+                if(M1){
+                    
+                    if(AimEnt){
+                        
+                        O:soundPlay(1,0,SoundConfirm)
+                        Temp[3,entity] = LastParent = AimEnt
+                        Step = (Step == "area1" ? "area2" : "poly2")
+                        
+                    }
+                    else{
+                        
+                        print("Error! Invalid entity. Try again.")
+                        O:soundPlay(1,0,SoundFail)
+                        
+                    }
+                    
+                }
+                elseif(M2){
+                    
+                    if(LastParent){
+                        
+                        O:soundPlay(1,0,SoundConfirm)
+                        Temp[3,entity] = LastParent
+                        Step = (Step == "area1" ? "area2" : "poly2")
+                        
+                    }
+                    else{
+                        
+                        print("Error! There is no previous selected parent.")
+                        O:soundPlay(1,0,SoundFail)
+                        
+                    }
+                    
+                } 
+                elseif(R){
+                    
+                    print("Cancelled "+(Step == "area1" ? "area" : "polygon")+" creation.")
+                    
+                    Step = ""
+                    Editing = 0
+                    
+                    holoDelete(IndexA)
+                    O:soundPlay(1,0,SoundCancel)
+                    Temp = table()
+                }                
+                
+            break
+            
+            case "area2",
+                
+                if(M1){
+                    
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                    pushIndex(1,holoEntity(IndexA),0.4)
+                    Temp[4,vector] = AimPosLocal
+                    Step = "area3"
+                    
+                }
+                elseif(R){
+                    
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                    Step = "area1"
+                    
+                }                 
+                
+            break
+            
+            case "area3",
+            
+                if(M1){
+                    
+                    Temp[5,vector] = AimPosLocal
+                    
+                    holoPos(IndexA,Temp[3,entity]:toWorld(mix(Temp[4,vector],AimPosLocal,0.5)))
+                    holoScale(IndexA,positive(positive(Temp[4,vector]-AimPosLocal)/96)+vec(0.01)) 
+                     
+                    O:soundPlay(1,0,SoundConfirm)
+                    Step = "area4"
+                }
+                elseif(R){
+                    
+                    Step = "area2"
+                    popIndex(1)
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                }        
+                        
+            break
+
+            case "area4",
+            
+                if(M1){
+                    
+                    Pos1 = Temp[4,vector]*vec(1,1,0) + vec(0,0,AimPosLocal:z())
+                    Pos2 = Temp[5,vector]*vec(1,1,0) + vec(0,0,AimPosLocal:z())
+                    
+                    Temp[4,vector] = mix(Pos1,Pos2,0.5)
+                    Temp[5,vector] = positive(Pos1-Pos2) 
+
+                    holoPos(IndexA,Temp[3,entity]:toWorld(Temp[4,vector]))
+                    
+                    O:soundPlay(1,0,SoundDone) 
+                    print("Area done.")
+
+                    Map:pushTable(Temp)
+                    updateTables()
+                    
+                    Step = ""
+                    Editing = 0
+                    
+                }
+                elseif(R){
+                    
+                    Step = "area3"
+                    
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                }                
+            break
+
+            case "poly2",
+                
+                if(M1){
+                    
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                    Temp[4,array][1,vector] = AimPosLocal
+                    Step = "poly3"
+
+                    print("Left click to create a vertex. Press R to undo.")
+        
+                    pushIndex(1,holoEntity(IndexA),1)
+                    
+                    holoModel(IndexA,"models/hunter/blocks/cube2x2x2.mdl")
+                    
+                     Temp[5,number] = PCount               
+                    
+                }
+                elseif(R){
+                    
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                    Step = "poly1"
+                    
+                }                 
+                
+            break
+            
+            case "poly3",
+                
+                if(M1){
+
+                    Vertices = Temp[4,array]
+                    
+                    Pitch = angnorm((Vertices[1,vector] - AimPosLocal):toAngle()):pitch()
+                    if(Pitch>45|Pitch<-45){
+                        
+                        O:soundPlay(1,0,SoundFail)
+                        print("Error! Too steep angle. Use portals for ladders etc.")
+                        
+                    }
+                    else{
+                        
+                        Step = "poly4"
+                        
+                        Vertices:pushVector(AimPosLocal)
+                        holoInterpolate(IndexA,Temp[3,entity],Vertices[1,vector],AimPosLocal)
+    
+                        holoColor(IndexA,vec(50,200,100))
+                        
+                        O:soundPlay(1,0,SoundConfirm)
+                        
+                        PCount += 1
+                        
+                        IndexA = 1000+PCount
+    
+                        print("Left click to create a vertex. Right click to finish polygon. Press R to undo.")
+                                    
+                        holoCreate(IndexA)
+                        holoParent(IndexA,Temp[3,entity])
+                        holoModel(IndexA,"models/hunter/blocks/cube2x2x2.mdl")
+                        holoMaterial(IndexA,"models/debug/debugwhite")
+                        
+                    }
+                                        
+                }
+                elseif(R){
+                    
+                    Step = "poly2"
+                    
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                    Temp[4,array]:popVector()
+
+                    holoColor(IndexA,vec(255))
+                    
+                    popIndex(1)
+                    
+                }
+                
+            break
+            
+            case "poly4",
+                
+                if(M1){
+                    
+                    Vertices = Temp[4,array]
+                    
+                    Pitch = angnorm((Vertices[Vertices:count(),vector] - AimPosLocal):toAngle()):pitch()
+                    if(Pitch>45|Pitch<-45){
+
+                        O:soundPlay(1,0,SoundFail)
+                        print("Error! Too steep angle. Use portals for ladders etc.")
+                        
+                    }
+                    else{
+                        
+                        Vertices = Temp[4,array]
+                        Vertices:pushVector(AimPosLocal)
+                        holoInterpolate(IndexA,Temp[3,entity],Vertices[Vertices:count()-1,vector],AimPosLocal)
+    
+                        holoColor(IndexA,vec(50,200,100))
+                        
+                        O:soundPlay(1,0,SoundConfirm)
+                        
+                        PCount += 1
+    
+                        IndexA = 1000+PCount
+    
+                        print("Left click to create a vertex. Right click to finish polygon. Press R to undo.")
+                                    
+                        holoCreate(IndexA)
+                        holoParent(IndexA,Temp[3,entity])
+                        holoModel(IndexA,"models/hunter/blocks/cube2x2x2.mdl")
+                        holoMaterial(IndexA,"models/debug/debugwhite")
+                        
+                    }
+                    
+                }
+                elseif(M2){
+                    
+                    O:soundPlay(1,0,SoundDone) 
+                    print("Polygon done.")
+
+                    Map:pushTable(Temp)
+                    updateTables()
+                    
+                    PCount -=1
+                    holoDelete(IndexA)
+                    
+                    Step = ""
+                    Editing = 0                    
+                    
+                }
+                elseif(R){
+                    
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                    holoDelete(IndexA)
+
+                    PCount -= 1                    
+
+                    if(Temp[4,array]:count()>2){
+
+                        Step = "poly4"
+                        IndexA = 1000+PCount
+                        
+                    }
+                    else{
+                        
+                        Step = "poly3"
+                        IndexA = Map:count() + 1
+                        
+                    }
+
+                    Temp[4,array]:popVector()                    
+                }
+                
+            break
+            
+            case "portal1",
+                
+                if(M1){
+                    
+                    Selected = Selectable[SelZone,table]
+                    
+                    holoParent(IndexB,Selected[3,entity])
+                    
+                    Temp[3,number] = Selected[1,number]
+
+                    AimPosLocalSelected = round(Selected[3,entity]:toLocal(O:aimPos()),1)
+
+                    pushIndex(2,holoEntity(IndexA),1)            
+
+                    for(I=1,PCount){
+                        
+                        holoColor(1000+I,vec(50,200,100))
+                        
+                    }
+                    
+                    if(Selected[2,string] == "area"){
+                    
+                        local Pos = Selected[4,vector]
+                        local Scale = Selected[5,vector]
+
+                        Temp[5,vector] = areaClamp(Pos,Scale,AimPosLocalSelected)
+                    
+                        holoPos(IndexB,Selected[3,entity]:toWorld(Temp[5,vector]))
+                    
+                    }
+                    else{
+                    
+                        CP = closestPoint(Selected[3,entity],AimPosLocalSelected,Selected[4,array])
+                        
+                        Pos1 = Selected[4,array][CP,vector]
+                        Pos2 = Selected[4,array][CP+1,vector]
+    
+                        Coefficient = linePoint(Pos1,Pos2,AimPosLocalSelected)
+                        
+                        Temp[5,number] = CP+Coefficient-1
+
+                        holoPos(IndexB,Selected[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                    
+                    }
+                    
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                    Step = "portal2"
+                
+                }
+                elseif(R){
+                    
+                    Step = ""
+                    Editing = 0
+                    
+                    holoDelete(IndexA)
+                    holoDelete(IndexB)
+                    holoDelete(IndexC)
+                    
+                    for(I=1,Selectable:count()){
+                        
+                        SelectableColor = Selectable[I,table][1,number]
+                        
+                        holoColor(SelectableColor,vec(50,200,100))
+                                             
+                    }
+                    
+                    for(I=1,PCount){
+                        
+                        holoColor(1000+I,vec(50,200,100))
+                        
+                    }
+                                                   
+                    O:soundPlay(1,0,SoundCancel)
+                    print("Cancelled portal creation.")
+                    
+                }
+                elseif(M2){
+                    
+                    SelZone += 1
+                    
+                    if(SelZone>Selectable:count()){SelZone = 1}
+
+                    for(I=1,Selectable:count()){
+                        
+                        SelectableColor = Selectable[I,table][1,number]
+                        
+                        holoColor(SelectableColor,SelZone==I ? vec(50,100,200) :    vec(50,200,100))
+                        
+                    }   
+                    
+                    Selected = Selectable[SelZone,table]
+                            
+                    for(I=1,PCount){
+                        
+                        if(Selected[2,string] == "poly"&I>Selected[5,number]&I<Selected[5,number]+Selected[4,array]:count()-1){
+                            
+                            holoColor(1000+I,vec(50,100,200))
+                            
+                        }
+                        else{
+                            
+                            holoColor(1000+I,vec(50,200,100))
+                            
+                        }
+                        
+                    }
+                                                 
+                }                
+                
+            break
+            
+
+            
+            case "portal2",
+            
+                if(M1){
+                    
+                    Selected = Selectable[SelZone,table]
+                    
+                    holoParent(IndexC,Selected[3,entity])
+                    
+                    Temp[4,number] = Selected[1,number]
+
+                    AimPosLocalSelected = round(Selected[3,entity]:toLocal(O:aimPos()),1)
+
+                    for(I=1,Selectable:count()){
+                        
+                        SelectableColor = Selectable[I,table][1,number]
+                        
+                        holoColor(SelectableColor,vec(50,200,100))
+                                             
+                    }
+                    
+                    for(I=1,PCount){
+                        
+                        holoColor(1000+I,vec(50,200,100))
+                        
+                    }    
+                                                        
+                    holoColor(IndexA,vec(255,0,255))
+                    holoColor(IndexB,vec(255,0,255))
+                    holoColor(IndexC,vec(255,0,255))
+
+                    if(Selected[2,string] == "area"){
+                    
+                        local Pos = Selected[4,vector]
+                        local Scale = Selected[5,vector]
+                    
+                        Temp[6,vector] = areaClamp(Pos,Scale,AimPosLocalSelected)
+
+                        holoPos(IndexC,Selected[3,entity]:toWorld(Temp[6,vector]))
+
+                    }
+                    else{
+
+                        CP = closestPoint(Selected[3,entity],AimPosLocalSelected,Selected[4,array])
+                        
+                        Pos1 = Selected[4,array][CP,vector]
+                        Pos2 = Selected[4,array][CP+1,vector]
+    
+                        Coefficient = linePoint(Pos1,Pos2,AimPosLocalSelected)
+                        
+                        Temp[6,number] = CP+Coefficient-1
+
+                        holoPos(IndexC,Selected[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+
+                    }
+                    
+                    O:soundPlay(1,0,SoundDone) 
+                    print("Portal done.")
+                    
+                    Map:pushTable(Temp)
+                    updateTables()
+                    
+                    Editing = 0
+                    Step = ""
+                    
+                }
+                elseif(R){
+                    
+                    Step = "portal1"
+                    O:soundPlay(1,0,SoundConfirm)
+                    
+                    popIndex(2)
+
+                    for(I=1,PCount){
+                        
+                        holoColor(1000+I,vec(50,200,100))
+                        
+                    }
+                                        
+                }
+                elseif(M2){
+                    
+                    SelZone += 1
+                    
+                    if(SelZone>Selectable:count()){SelZone = 1}
+
+                    for(I=1,Selectable:count()){
+                        
+                        SelectableColor = Selectable[I,table][1,number]
+                        
+                        holoColor(SelectableColor,SelZone==I ? vec(50,100,200) :    vec(50,200,100))
+                        
+                    }           
+
+                    Selected = Selectable[SelZone,table]
+                            
+                    for(I=1,PCount){
+                        
+                        if(Selected[2,string] == "poly"&I>Selected[5,number]&I<Selected[5,number]+Selected[4,array]:count()-1){
+                            
+                            holoColor(1000+I,vec(50,100,200))
+                            
+                        }
+                        else{
+                            
+                            holoColor(1000+I,vec(50,200,100))
+                            
+                        }
+                        
+                    }
+                                                 
+                } 
+                
+            break
+
+            case "global1",
+            
+                if(M1){
+                    
+                    Selected = Selectable[SelZone,table]
+                    
+                    holoParent(IndexA,Selected[3,entity])
+                    
+                    Temp[3,number] = Selected[1,number]
+
+                    AimPosLocalSelected = round(Selected[3,entity]:toLocal(O:aimPos()),1)
+
+                    for(I=1,Selectable:count()){
+                        
+                        SelectableColor = Selectable[I,table][1,number]
+                        
+                        holoColor(SelectableColor,vec(50,200,100))
+                                             
+                    }
+
+                    for(I=1,PCount){
+                        
+                        holoColor(1000+I,vec(50,200,100))
+                        
+                    }
+                                                            
+                    holoColor(IndexA,vec(255,255,0))
+
+                    if(Selected[2,string] == "area"){
+                    
+                        local Pos = Selected[4,vector]
+                        local Scale = Selected[5,vector]
+                    
+                        Temp[4,vector] = areaClamp(Pos,Scale,AimPosLocalSelected)
+
+                        holoPos(IndexA,Selected[3,entity]:toWorld(Temp[4,vector]))
+                    
+                    }
+                    else{
+                    
+                        CP = closestPoint(Selected[3,entity],AimPosLocalSelected,Selected[4,array])
+                        
+                        Pos1 = Selected[4,array][CP,vector]
+                        Pos2 = Selected[4,array][CP+1,vector]
+    
+                        Coefficient = linePoint(Pos1,Pos2,AimPosLocalSelected)
+                        
+                        Temp[4,number] = CP+Coefficient-1
+
+                        holoPos(IndexA,Selected[3,entity]:toWorld(mix(Pos2,Pos1,Coefficient)))
+                    
+                    }
+                    
+                    O:soundPlay(1,0,SoundDone) 
+                    print("Global portal done.")
+                    
+                    Map:pushTable(Temp)
+
+                    updateTables()
+                    
+                    Editing = 0
+                    Step = ""
+                    
+                }
+                elseif(R){
+                    
+                    Step = ""
+                    Editing = 0
+                    
+                    holoDelete(IndexA)
+                    holoDelete(IndexB)
+                    holoDelete(IndexC)
+                    
+                    for(I=1,Selectable:count()){
+                        
+                        SelectableColor = Selectable[I,table][1,number]
+                        
+                        holoColor(SelectableColor,vec(50,200,100))
+                                             
+                    }         
+
+                    for(I=1,PCount){
+                        
+                        holoColor(1000+I,vec(50,200,100))
+                        
+                    }
+                                                  
+                    O:soundPlay(1,0,SoundCancel)
+                    print("Cancelled global portal creation.")
+
+                    popIndex(2)
+                    
+                }
+                elseif(M2){
+                    
+                    SelZone += 1
+                    
+                    if(SelZone>Selectable:count()){SelZone = 1}
+
+                    for(I=1,Selectable:count()){
+                        
+                        SelectableColor = Selectable[I,table][1,number]
+                        
+                        holoColor(SelectableColor,SelZone==I ? vec(50,100,200) :    vec(50,200,100))
+                        
+                    }         
+                     
+                    Selected = Selectable[SelZone,table]
+                    
+                    for(I=1,PCount){
+                        
+                        if(Selected[2,string] == "poly"&I>Selected[5,number]&I<Selected[5,number]+Selected[4,array]:count()-1){
+                            
+                            holoColor(1000+I,vec(50,100,200))
+                            
+                        }
+                        else{
+                            
+                            holoColor(1000+I,vec(50,200,100))
+                            
+                        }
+                        
+                    }       
+                                          
+                } 
+                
+            break
+
+        }
+        
+    }
+    
+}
+
+elseif(clk("export1")){
+    
+    if(perf(80)){
+        
+        Wave += 5
+        Indexed = 0
+        for(I = Wave2,min(Wave,ExportMap:count())){ 
+                
+            if(ExportMap[I,table][2,string]=="area"|ExportMap[I,table][2,string]=="poly"){
+            
+                for(J = 1,IndexedEnts:count()){   #For every currently known pair of numbers and entities
+                    
+                    if(IndexedEnts[J,entity] == ExportMap[I,table][3,entity]){
+                        
+                        ExportMap[I,table][3,number] = J
+                        Indexed = 1
+                        
+                        break
+                        
+                    }
+                    
+                }
+                
+                if(Indexed == 0){ #if the loop was NOT broken manually, add a new entry to the IndexedEnts list.
+                    
+                    IndexedEnts:pushEntity(ExportMap[I,table][3,entity])
+                    ExportMap[I,table][3,number] = IndexedEnts:count()
+
+                }
+                
+                Indexed = 0
+                
+            }
+            
+        }
+        
+        Wave2 = Wave + 1
+        
+        if(Wave<ExportMap:count()){
+            
+            timer("export1",0)
+            
+        }
+        else{
+            
+            timer("export2",100)
+            Wave = 0
+            Wave2 = 1
+            print("#COPY EVERYTHING BELOW AND PASTE IT INTO THE MAP E2
+Areas = table(")
+            
+            EAreas:clear()
+            EPolygons:clear()
+            EPortals:clear()
+            
+            for(I = 1,ExportMap:count()){
+                
+                T = ExportMap[I,table]
+                String = T[2,string]
+                
+                switch(String){
+                    
+                    case "area",
+                        
+                        EAreas:pushTable(T)
+                        
+                    break
+    
+                    case "poly",
+                        
+                        EPolygons:pushTable(T)
+                                   
+                    break
+                    
+                    case "global",
+                    case "portal",
+                        
+                        EPortals:pushTable(T)
+                        
+                    break
+                    
+                }
+                
+            }   
+            
+        }
+        
+    }
+    else{
+        
+        timer("export1",1000)
+        
+        
+    }
+    
+}
+
+elseif(clk("export2")){
+    
+    if(perf(80)){
+        
+        Wave += 5
+        
+        for(I = Wave2,min(Wave,EAreas:count())){
+            
+            local A = EAreas[I,table]
+
+            print("#Area(Area) "+localGlobal(A[1,number])+"
+table( "+A[1,number]+" , \"area\" , Ent"+A[3,number]+" , "+vecToString(A[4,vector])+" , "+vecToString(A[5,vector])+" )"+(I == EAreas:count() ? "" : ","))
+                                
+        }
+        
+        Wave2 = Wave + 1
+        
+        if(Wave<EAreas:count()){
+            
+            timer("export2",0)
+            
+        }
+        else{
+            
+            timer("export3",0)
+            Wave = 0
+            Wave2 = 1
+            
+            print(")
+Polygons = table(")
+            
+        }
+        
+    }
+    else{
+        
+        timer("export2",1000)
+        
+    }    
+    
+}
+
+elseif(clk("export3")){
+    
+    if(perf(80)){
+        
+        Wave += 5
+        
+        for(I = Wave2,min(Wave,EPolygons:count())){
+            
+            local A = EPolygons[I,table]
+            
+            print("#Area(Poly) "+localGlobal(A[1,number])+"
+table( "+A[1,number]+" , \"poly\" , Ent"+A[3,number]+" , array(")
+            for(J = 1,A[4,array]:count()){
+                
+                A[4,array][J,string] = vecToString(A[4,array][J,vector])
+
+                String += A[4,array][J,string]+(J == A[4,array]:count() ? "" : ",")
+    
+                if(1+J/4 == 1+floor(J/4)){
+                    
+                    print(String)
+                    String = ""
+                    
+                }
+                
+            }
+            print(String+"),"+A[5,number]+" )"+(I == EPolygons:count() ? "" : ","))
+            String = ""
+                                
+        }
+        
+        Wave2 = Wave + 1
+        
+        if(Wave<EPolygons:count()){
+            
+            timer("export3",0)
+            
+        }
+        else{
+            
+            timer("export4",0)
+            Wave = 0
+            Wave2 = 1
+            
+            print(")
+Portals = table(")
+            
+        }
+        
+    }
+    else{
+        
+        timer("export3",1000)
+        
+    }    
+    
+}
+
+elseif(clk("export4")){
+    
+    if(perf(80)){
+        
+        Wave += 5
+
+        for(I = Wave2,min(Wave,EPortals:count())){
+            
+            local A = EPortals[I,table]
+
+            if(A[2,string] == "portal"){
+                
+                print("#Portal "+I+"
+table( "+A[1,number]+" , \"portal\" , "+A[3,number]+" , "+A[4,number]+" , "+
+(Map[A[3,number],table][2,string] == "area" ? vecToString(A[5,vector]) : A[5,number]:toString())+" , "+
+(Map[A[4,number],table][2,string] == "area" ? vecToString(A[6,vector]) : A[6,number]:toString())+" , "+
+A[7,number]+" , "+A[8,number]+" , "+A[9,number]+" , "+A[10,number]+" )"+(I == EPortals:count() ? "" : ","))
+                
+            }
+            else{
+                
+                print("#Portal "+I+" (Global)
+table( "+A[1,number]+" , \"global\" , "+A[3,number]+" , "+
+(Map[A[3,number],table][2,string] == "area" ? vecToString(A[4,vector]) : A[4,number]:toString())+" , "+
+A[5,number]+" , "+A[6,number]+" )"+(I == EPortals:count() ? "" : ","))
+                
+            }
+                                
+        }
+        
+        Wave2 = Wave + 1
+        
+        if(Wave<EPortals:count()){
+            
+            timer("export4",0)
+            
+        }
+        else{
+            
+            print(")")
+            O:soundPlay(1,0,SoundDone)
+            
+        }
+        
+    }
+    else{
+        
+        timer("export4",1000)
+        
+    }    
+    
+}
+

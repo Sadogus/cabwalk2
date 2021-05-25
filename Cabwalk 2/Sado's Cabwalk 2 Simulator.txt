@@ -1,0 +1,966 @@
+@name Sado's Cabwalk 2.TEST Simulator
+@inputs NativeMap:entity [SeatPod FootplatePod CamController]:wirelink 
+@outputs KeyboardDisabled
+
+@persist TempCP CP IdealCP CIndex Coefficient PortalCoefficient PortalIndex DestIndex Active DirMoveDot CurrentZone ActivePortal YawOffset StopLoopback IsDriving SelectedPortalSide
+@persist Reset M1 M2 W A S D Sprint TravelMode WalkSpeed SprintSpeed PortalSpeed StartZone Mode RenderOrigin ProximityMode ProximityDist ReturnToOrigin AutoPortalMove 
+@persist [Pos Pos1 Pos1Ideal Pos2 Pos2L MoveDir AreaPos AreaScale FootplateDefaultPos]:vector
+@persist [User SDriver FDriver CurrentMap Footplate Seat H0 H1 ZoneParent TempParent ReqEnt FootplateParent]:entity
+@persist [ZoneType]:string [FootplateDefaultAng]:angle
+@persist [Map Zones Portals Zone LocalPortals UseKeys DestZone ReqPortal]:table
+
+if(first()|dupefinished()){#[
+
+    Modes
+        There are two methods of linking a simulator to an areamap: hybrid mode and footplate mode.
+    
+        Hybrid mode:
+            Hybrid mode requires a seat and a footplate with a pod controller to each.
+            The user switches between the seat and footplate. This is used for vehicles where you primarily sit.
+            This is the safest and easiest method to use.
+        
+        Footplate mode:
+            Footplate mode uses only a footplate with a pod controller.
+            The user uses the footplate for both controlling the vehicle and cabwalk.
+            The footplate will return to the position it was at when the chip was refreshed.
+            BE CAREFUL! If the footplate is not where it should be while duping/refreshing, it will use the new location as default instead.
+            Using footplate mode also requires some editing in other e2s such as locomotive control chips as they should no longer receive
+            keyboard input while cabwalk is active. See tutorial # for more information.
+        
+
+    Linking Cabwalk
+        To link the cabwalk simulator to an map, you will need to spawn the map e2 with the given mapping. Link input "NativeMap" to the "NativeMap" on
+        the map native to the controller (in most cases this is the locomotive's map)
+        For hybrid mode, spawn a seat, footplate, and link a pod controller to each. Link input "SeatPod" and "FootplatePod" to the seat pod and footplate pod respectively
+        For footplate mode, spawn a footplate and link a pod controller to it. Link input "FootplatePod" to the footplate pod and leave the "SeatPod" input unlinked.
+        In settings, set the variable "StartZone" to the zone closest to the seat/footplate. You can see the zone ids by turning on "RenderMap" in the map e2.
+
+]#
+
+
+    #Footplate Mode Settings
+    Buttons = 1             #Allow buttons while cabwalk is INACTIVE
+    Crosshair = 1           #Show crosshair while cabwalk is INACTIVE
+
+    #Simulator General Settings
+    WalkSpeed = 4           #Speed while walking normally.
+    SprintSpeed = 12        #Speed while holding down shift.
+    PortalSpeed = 8         #Speed while travelling from one node to another.
+    StartZone = 1           #This is the area you will stand in when you toggle it on.
+    RenderOrigin = 1        #DEBUG: Render the hologram origins of the foorplate
+    Bobbing = 1             #Wobble camera while moving
+    ProximityMode = 1       #Allow user to only return to origin/seat if within ProximityDist. (WARNING: failure to return is NOT a valid excuse for griefing)
+    ProximityDist = 120     #Distance to be within to return to origin/seat (only while ProximitySeat or ProximityFootplate is enabled)
+    
+    #Controls
+    UseKeys = table(
+        "W",            #Forward key
+        "A",            #Left key
+        "S",            #Down key
+        "D",            #Right key
+        "LSHIFT",       #Sprint key
+        "LALT",          #Cabwalk Toggle key
+        "MOUSE_LEFT",   #Use key
+        "MOUSE_RIGHT"  #Portal Entry key
+    )
+    #[
+    Alternate buttons include
+        
+        PAD_5,PAD_1,PAD_2,PAD_3     for numpad keys
+        
+    
+    
+    
+    #Warranty void if e2 is tampered beyond this line 
+    ---------------------------------------------------------]#
+    
+
+    CurrentZone = StartZone
+    CurrentMap = NativeMap
+    
+    runOnLast(1)
+    dsSetScope(2)
+#    interval(100)
+    timer("parent",50)
+    
+    for(I=1,UseKeys:count()){
+        
+        UseKeys[I,string] = UseKeys[I,string]:lower()
+        
+    }
+    
+    if(!NativeMap){
+        
+        hint("NativeMap is not linked. Wire NativeZonemap and then refresh the e2.",8)
+        
+    }
+    if(!FootplatePod){
+        
+        hint("FootplatePod is not linked. Wire FootplatePod and refresh the e2.",8)
+        
+    }
+    if(FootplatePod&SeatPod){
+        
+        #ifdef entity:plyEnterVehicle(entity)
+
+            hint("Running Cabwalk in hybrid mode.",5)
+            FootplatePod["Lock",number] = 1
+            SeatPod["Lock",number] = 0
+            Mode = 1                        
+            
+        #else
+        
+            error("Error! You cannot use hybrid mode without PlayerCore")
+            
+        #endif
+        
+    }
+    if(FootplatePod&!SeatPod){
+        
+        Mode = 2
+        hint("No seat detected. Running Cabwalk in footplate mode.",5)
+        FootplatePod["Lock",number] = 0
+        FootplatePod["Allow Buttons",number] = Buttons
+        FootplatePod["Crosshairs",number] = Crosshair
+        
+    }
+
+    
+    Footplate = FootplatePod["Entity",entity]
+    Seat = SeatPod["Entity",entity]   
+    
+    CurrentZone = StartZone
+
+    holoCreate(0)
+    holoScale(0,vec(0.2,0.2,1)*RenderOrigin)
+    H0 = holoEntity(0)
+
+    holoCreate(1)
+    holoParent(1,holoEntity(0))
+    holoScale(1,vec(0.3,0.3,0.8)*RenderOrigin)
+    H1 = holoEntity(1)
+    
+    FootplateDefaultPos = Footplate:pos()
+    FootplateDefaultAng = Footplate:angles()
+    
+    Footplate:setPos(H1:pos())
+    Footplate:setAng(H1:toWorld(ang(0,0,0)))
+    
+    CamController["Parent",entity] = holoEntity(0)
+    CamController["Position",vector] = vec(0,0,66)
+
+    function updateTables(){
+            
+        Zones:clear()
+        Portals:clear()
+        
+        for(I = 1,Map:count()){
+            
+            T = Map[I,table]
+            
+            String = T[2,string]
+            
+            if(String == "area" | String == "poly"){
+                
+                Zones:pushTable(T)
+                
+            }
+            else{
+                
+                Portals:pushTable(T)
+                
+            }
+
+        }      
+        
+    }
+
+    function initVariables(){ #changes the value of relevant variables
+        
+        SDriver = Seat:driver()
+        FDriver = Footplate:driver()
+        Zone = Map[CurrentZone,table]
+        ZoneParent = Zone[3,entity]
+        LocalPortals:clear()
+        ZoneType = Zone[2,string]
+
+        holoParent(0,ZoneParent)
+
+        if(ZoneType == "area"){ #Use pos and scale vectors when on an area
+            
+            AreaPos = Zone[4,vector]
+            AreaScale = Zone[5,vector]
+            
+        }
+        else{
+            
+            #todo poly
+            
+        }
+        
+        for(I=1,Portals:count()){
+            
+            if(Portals[I,table][2,string]=="portal" & (Portals[I,table][3,number] == Zone[1,number] | Portals[I,table][4,number] == Zone[1,number])){
+                    
+                    LocalPortals:pushTable(Portals[I,table])
+                
+            }
+            elseif(Portals[I,table][2,string]=="global" & Portals[I,table][3,number] == Zone[1,number]){
+                
+                LocalPortals:pushTable(Portals[I,table])
+                
+            }
+            
+        }
+        
+    }
+
+    function vector areaClamp(Pos:vector){ #commonly used function
+        
+        Clamped = clamp(Pos,AreaPos-AreaScale/2,AreaPos+AreaScale/2)
+        
+        return Clamped
+        
+    }
+    function void setRelativeAng(Origin:entity,Dest:entity,Co){
+        
+        holoAng(0,
+            (quat( #set the two axis rotation as a quaternion
+                mix( #mix the two quaternion angles with the coefficient
+                    (quat(Dest:angles():rotateAroundAxis(Dest:up(),-Dest:angles():yaw()))):toAngle(),
+                    (quat(Origin:angles():rotateAroundAxis(Origin:up(),-Origin:angles():yaw()))):toAngle(),
+                    Co))
+                        *quat(ang(0,YawOffset,0))#add yaw offset to the final rotation
+                            ):toAngle())
+        
+    }
+
+    function number dotNormal(Vec1:vector,Vec2:vector){
+        
+        return Vec1:normalized():dot(Vec2:normalized())
+        
+    }
+
+    function number linePoint(Pos1:vector, Pos2:vector, Point:vector){
+        
+        P1P2 = Pos2-Pos1
+        P1S = Point-Pos1
+        
+        P1P2sq = P1P2:x()^2+P1P2:y()^2+P1P2:z()
+        Proportion = P1S:dot(P1P2)/P1P2sq
+    
+        return clamp(Proportion,0,1)
+        
+    }
+
+    function number closestPoint(Parent:entity,Pos:vector,Vectors:array){
+        
+        Distances = array()
+
+        for(I = 2,Vectors:count()){
+            
+            Pos1 = Vectors[I-1,vector]
+            Pos2 = Vectors[I,vector]
+            
+            Coefficient = linePoint(Pos1,Pos2,Pos)
+            
+            RelativePos = mix(Pos2,Pos1,Coefficient)
+            
+            Dist = Pos:distance(RelativePos)
+            
+            Distances:pushNumber(Dist)
+            
+        }
+        
+        return Distances:minIndex()
+        
+    }
+
+    function resetPos(){ #resets the position of the footplate when it is turned on/off
+        
+        CurrentZone = StartZone
+        TravelMode = 0
+        PortalCoefficient = 0
+
+        
+
+        initVariables()           
+        
+        dsSendDirect("activezone",CurrentMap,CurrentZone)
+
+        
+        setRelativeAng(ZoneParent,ZoneParent,1)    
+
+        if(Mode == 1){
+            
+            local SeatPosLocal = ZoneParent:toLocal(Seat:pos())
+
+            holoAng(1,holoEntity(0):toWorld(ang(0,holoEntity(0):toLocal(Seat:angles()):yaw(),0)))
+            
+            if(Zone[2,string] == "area"){
+                
+                Pos = areaClamp(SeatPosLocal)
+                
+            }
+            else{
+                
+                CIndex = closestPoint(ZoneParent,SeatPosLocal,Zone[4,array]) - 1
+                    
+                local Pos1 = Zone[4,array][CIndex+1,vector]
+                local Pos2 = Zone[4,array][CIndex+2,vector]
+
+                Coefficient = linePoint(Pos1,Pos2,SeatPosLocal)
+                
+                
+                Pos = mix(Pos2,Pos1,Coefficient)
+                
+                CP = CIndex+Coefficient
+       
+            }
+            
+            holoPos(0,ZoneParent:toWorld(Pos))
+
+        }
+        else{
+
+            Pos = FootplateDefaultPos
+            Ang = FootplateDefaultAng
+            
+            holoPos(0,ZoneParent:toWorld(Pos))
+            holoAng(1,ZoneParent:toWorld(Ang))
+            
+
+        }
+
+    }       
+    
+    function refreshMapTable(){
+        
+        if(ActivePortal){
+            
+            dsSendDirect("inactiveportal",CurrentMap,ActivePortal)
+            ActivePortal = 0                
+            
+        }
+        else{
+            
+            dsSendDirect("inactivezone",CurrentMap,CurrentZone)
+            
+        }        
+        
+    }
+    
+    function setNative(){
+
+        refreshMapTable()
+
+        dsSendDirect("breakconnection",CurrentMap,1)
+        CurrentMap = NativeMap
+        dsSendDirect("maprequest",CurrentMap,1) #initial areamap request for the native areamap        
+                
+        resetPos()
+        
+    }
+
+    function void portalInit(P:table){
+
+        PortalIndex = P[1,number]
+        Pos1 = Pos
+                
+        DestZone = Map[P[4-SelectedPortalSide,number],table]
+
+        DestIndex = DestZone[1,number]
+        
+        if(DestZone[2,string]=="area"){
+            
+            Pos2 = P[6-SelectedPortalSide,vector]
+            
+        }
+        else{
+            
+            DestCP = P[6-SelectedPortalSide,number]+1
+            DestCIndex = floor(DestCP)
+            DestCoefficient = DestCP-DestCIndex
+            
+            Pos2 = mix(DestZone[4,array][DestCIndex+1,vector],DestZone[4,array][DestCIndex,vector],DestCoefficient)
+            
+        }
+
+        Pos2L = ZoneParent:toLocal(DestZone[3,entity]:toWorld(Pos2))
+        
+        if((Pos2L-Pos):setZ((Pos2L-Pos):z()*0.5):normalized():dot(MoveDir:normalized())>0.6|AutoPortalMove){
+            
+            TravelMode = 1
+            YawOffset = holoEntity(0):angles():yaw()
+
+            for(I=1,Portals:count()){
+                
+                if(Portals[I,table]==P){
+                    
+                    ActivePortal = I
+                    
+                    dsSendDirect("activeportal",CurrentMap,I)
+                    dsSendDirect("inactivezone",CurrentMap,CurrentZone)
+                    
+                }
+                
+            }            
+        
+        }                      
+        
+    }
+    
+    function void checkPortal(){
+                
+        if(ZoneType == "area"){
+            
+            for(I=1,LocalPortals:count()){
+                
+                P = LocalPortals[I,table]
+                
+                if(P[2,string]=="portal"){
+                    
+                    if(P[9,number]){
+                        
+                        if(P[3,number] == CurrentZone & Pos:distance(P[5,vector]) < P[7,number]){
+                            
+                            SelectedPortalSide = 0
+                            Pos1Ideal = P[5,vector]
+                            portalInit(P)
+                            
+                            break
+        
+                        }
+                        if(P[4,number] == CurrentZone & Pos:distance(P[6,vector]) < P[8,number]){
+                            
+                            SelectedPortalSide = 1
+                            Pos1Ideal = P[6,vector]
+                            portalInit(P)
+                            
+                            break
+                            
+                        }
+                        
+                    }
+                  
+                }
+                elseif(AutoPortalMove){#global portals
+
+                    if(Pos:distance(P[4,vector]) < P[5,number]){
+                        
+                        Pos1Ideal = P[4,vector]
+                        
+                        
+                        RequestTable = table(ZoneParent,Pos1Ideal,P[6,number])#send parent entity, pos and 
+                        dsSend("globalcheck","cabwalk",RequestTable)
+                        #ex globalreq
+
+                        YawOffset = holoEntity(0):angles():yaw()
+                        
+                        break
+
+                    }
+                    
+                }
+                
+            }        
+                
+        }
+        else{
+            
+            for(I=1,LocalPortals:count()){
+                
+                P = LocalPortals[I,table]
+                
+                Array = Zone[4,array]
+
+                if(P[9,number]&P[2,string]=="portal"){
+                
+                    CPTemp = P[5,number] + 1
+                    CPTempIndex = floor(CPTemp)
+                    CPTempCoefficient = CPTemp-CPTempIndex
+                    if(P[3,number] == CurrentZone & Pos:distance(mix(Array[CPTempIndex+1,vector],Array[CPTempIndex,vector],CPTempCoefficient)) < P[7,number]){
+                        
+                        SelectedPortalSide = 0
+                        
+                        IdealCP = CPTemp
+                        
+                        Pos1Ideal = mix(Array[CPTempIndex+1,vector],Array[CPTempIndex,vector],CPTempCoefficient)
+                        
+                        portalInit(P)
+                        
+                        break
+                        
+                    }
+                    CPTemp = P[6,number] + 1
+                    CPTempIndex = floor(CPTemp)
+                    CPTempCoefficient = CPTemp-CPTempIndex
+                    if(P[4,number] == CurrentZone & Pos:distance(mix(Array[CPTempIndex+1,vector],Array[CPTempIndex,vector],CPTempCoefficient)) < P[8,number]){
+                        
+                        SelectedPortalSide = 1
+                        
+                        IdealCP = CPTemp
+                        
+                        Pos1Ideal = mix(Array[CPTempIndex+1,vector],Array[CPTempIndex,vector],CPTempCoefficient)
+                        
+                        portalInit(P)
+                        
+                        break
+                        
+                    }
+                
+                }
+                
+                elseif(AutoPortalMove){#global portals
+
+                    CPTemp = P[4,number] + 1
+                    CPTempIndex = floor(CPTemp)
+                    CPTempCoefficient = CPTemp-CPTempIndex
+
+                    if(Pos:distance(mix(Array[CPTempIndex+1,vector],Array[CPTempIndex,vector],CPTempCoefficient)) < P[5,number]){
+
+                        Pos1Ideal = mix(Array[CPTempIndex+1,vector],Array[CPTempIndex,vector],CPTempCoefficient)
+                        
+                        RequestTable = table(ZoneParent,Pos1Ideal,P[6,number])#send parent entity, pos and 
+                        dsSend("globalcheck","cabwalk",RequestTable)
+
+                        YawOffset = holoEntity(0):angles():yaw()
+                        
+                        break
+                        
+                    }
+                    
+                }
+
+            }
+            
+        }
+        
+    }
+    
+}
+
+if(clk()){
+    
+    interval(100)
+
+    IsDriving = FootplatePod["Active",number]
+            
+    if(Mode == 1){#hybrid mode seat/footplate settings
+        
+        if(SeatPod["Active",number]){#enable toggle key while in seat
+            
+            local KeyToggle = Seat:driver():keyPressed(UseKeys[6,string])
+            if(changed(KeyToggle)&&KeyToggle){
+                User = Seat:driver()
+
+                #ifdef entity:plyEnterVehicle(entity)
+                    Seat:driver():plyEnterVehicle(Footplate)
+                #endif
+                
+                StopLoopback = 1
+                
+            }
+            
+        }
+
+        if(IsDriving){#enable toggle key while in footplate
+            
+            local KeyToggle = Footplate:driver():keyPressed(UseKeys[6,string])
+            if(changed(KeyToggle)&&KeyToggle&&!StopLoopback){
+
+                if(Footplate:pos():distance(Seat:pos())<ProximityDist|!ProximityMode){
+                    
+                    #ifdef entity:plyEnterVehicle(entity)
+                        Footplate:driver():plyEnterVehicle(Seat)
+                    #endif
+
+                }
+                else{
+                    
+                    Active = !Active
+                    CamController["Activated",number] = Active
+                    
+                }
+                
+            }            
+            
+            StopLoopback = 0        
+                
+        }
+        
+        if(changed(IsDriving)){#setting/resetting variables
+      
+            setNative()
+            
+            SeatPod["Lock",number] = CamController["Activated",number] = Active = IsDriving
+            runOnKeys(User,IsDriving)
+            
+        }
+        
+    }
+    else{
+        
+        if(IsDriving){#enable toggle key while in footplate
+            
+            local KeyToggle = Footplate:driver():keyPressed(UseKeys[6,string])
+            if(changed(KeyToggle)&KeyToggle){
+                
+                Active = !Active
+                
+            }
+            
+        }
+        
+        if(changed(IsDriving)){
+            
+            if(!IsDriving){
+                
+                Active = 0
+                KeyboardDisabled = 0
+                    
+                setNative()
+                    
+                    
+            }
+            
+        }
+        
+        elseif(changed(Active)){#shuts down cabwalk and returns to origin if enabled
+        
+            if(!Active){
+                
+                if(Footplate:pos():distance(FootplateParent:toWorld(FootplateDefaultPos))<ProximityDist|!ProximityMode){
+                    
+                    KeyboardDisabled = 0
+                    setNative()
+                    
+                }
+                
+            }
+            else{
+                
+                KeyboardDisabled = 1
+                
+            }
+                        
+            CamController["Activated",number] = Active
+            User = Footplate:driver()
+            runOnKeys(User,Active)
+
+        }
+        
+    }
+    
+    if(Active){
+        
+        Ranger = CamController["Trace",ranger]
+        RangerEnt = Ranger:entity()
+        
+        if(Ranger:distance()<70){#How long the player can reach
+            
+            if(changed(M1)&M1){
+                
+                RangerEnt:use()
+                
+            }
+            
+        }
+    
+        local PlyDir = ZoneParent:toLocalAxis(CamController["CamDir",vector])
+        local PlyDir2D = vec(PlyDir:x(),PlyDir:y(),0)
+
+        local Ang = H0:toLocal(CamController["CamAng",angle]):yaw()
+
+        MoveDir = PlyDir2D*(W-S)+PlyDir2D:rotate(ang(0,90,0))*(A-D)
+        Speed = (Sprint ? SprintSpeed : WalkSpeed)
+        
+        holoAng(1,H0:toWorld(ang(0,Ang-90,0)))
+        
+        if(TravelMode == 0){
+            
+            if((W|A|S|D)){
+                
+                
+                
+                
+                if(ZoneType == "area"){#movement within an area
+                    
+                    PosOld = Pos    #$Pos won't work after its been clamped??
+                    Pos += MoveDir * Speed
+                    Pos = areaClamp(Pos)
+                
+                    DirMoveDot = (Pos-PosOld):normalized():dot(MoveDir:normalized())
+                    
+                }
+                else{#movement within a polygon
+                    
+                    Array = Zone[4,array]
+                    Pos1 = Array[CIndex+1,vector]
+                    Pos2 = Array[CIndex+2,vector]
+                    
+                    MoveLinearDot = (Pos2-Pos1):normalized():dot(MoveDir:normalized())
+                    
+                    CPOld = CP
+                    
+                    Rate = Speed/Pos1:distance(Pos2)
+                    
+                    if(Coefficient){
+                        
+                        CP += MoveLinearDot*Rate
+                        CP = clamp(CP,CIndex,CIndex + 1)
+                        
+                    }
+                    else{
+                        
+                            
+                        CIndex = floor(CP)
+                        
+                        DotLower = clamp((Pos-Array[CIndex,vector]):normalized():dot(MoveDir:normalized()),-1,0)*(CIndex!=0)
+                        DotHigher = clamp((Pos-Pos2):normalized():dot(MoveDir:normalized()),-1,0)*(CIndex!=Array:count()-1)
+                        if(DotLower<DotHigher){
+                            
+                            Rate = Speed/Pos:distance(Array[CIndex,vector])
+                            CP += DotLower*Rate
+                            
+                        }
+                        else{
+                            
+                            Rate = Speed/Pos:distance(Pos2+vec(0,0,0.1))
+                            CP = CP - DotHigher*Rate
+
+                        }  
+                                              
+                    }
+                    
+                    CIndex = floor(CP)
+                    Coefficient = CP-CIndex
+
+                    DirMoveDot = (CP-CPOld)/Rate
+
+                    Pos1 = Array[CIndex+1,vector]
+                    Pos2 = Array[CIndex+2,vector]
+                    
+                        
+                    Pos = mix(Pos2,Pos1,Coefficient)
+                        
+                }
+                
+                holoPos(0,ZoneParent:toWorld(Pos))
+
+                if(abs(DirMoveDot)<0.4){
+                        
+                    AutoPortalMove = 0
+                    checkPortal()
+
+                }                                
+
+            }
+        
+            if(M2){
+                
+                AutoPortalMove = 1
+                checkPortal()
+
+            }
+
+        }
+        elseif(TravelMode == 1){
+            
+                
+            Pos1 = mix(Pos1Ideal,Pos1,0.1)
+            Pos2L = ZoneParent:toLocal(DestZone[3,entity]:toWorld(Pos2))
+
+            if(AutoPortalMove){
+                
+                Rate = PortalSpeed/Pos1:distance(Pos2L)
+                
+            }
+            else{
+                
+                Rate = (Pos2L-Pos1):normalized():dot(MoveDir:normalized())*Speed/Pos1:distance(Pos2L)
+
+                #CP is only changed if manual movement because with autoportalmove, it's scrapped in favor of Pos1
+                CP += ((IdealCP-1)-CP)*0.1
+                
+            }
+            
+            PortalCoefficient += Rate
+            PortalCoefficient = clamp(PortalCoefficient,-0.001,1.001)
+            
+            holoPos(0,ZoneParent:toWorld(mix(Pos2L,Pos1,PortalCoefficient)))
+            
+            if(ZoneParent != DestZone[3,entity]){
+                
+                setRelativeAng(ZoneParent,DestZone[3,entity],PortalCoefficient)    
+                
+            }
+                
+            if(PortalCoefficient > 1){
+                
+                #if you reach your destination    
+                CurrentZone = DestIndex
+                initVariables()
+                
+                #portal in question is no longer active and the area is - inform map
+                dsSendDirect("inactiveportal",CurrentMap,ActivePortal)
+                dsSendDirect("activezone",CurrentMap,CurrentZone)
+                
+                ActivePortal = 0
+                
+                PortalCoefficient = TravelMode = 0
+
+                Pos = Pos2
+                #no harm in defining CP even if destination is an area
+                CP = Map[PortalIndex,table][6-SelectedPortalSide,number]
+                
+
+                
+            }    
+            elseif(PortalCoefficient < 0){
+                #if you go back (only possible with manual movement)
+                
+                PortalCoefficient = TravelMode = 0
+                Pos = Pos1
+                
+                #portal in question is no longer active and the area is - inform map
+                dsSendDirect("inactiveportal",CurrentMap,ActivePortal)
+                dsSendDirect("activezone",CurrentMap,CurrentZone)
+                
+                ActivePortal = 0                
+
+                #CP is still defined, no need to define again
+                
+            }      
+            
+        }
+        else{
+            
+            Pos1 = mix(Pos1Ideal,Pos1,0.1)
+            Pos2L = TempParent:toLocal(ReqPortal[1,entity]:toWorld(Pos2))
+            
+            Rate = PortalSpeed/Pos1:distance(Pos2L)
+            
+            PortalCoefficient += Rate
+            PortalCoefficient = clamp(PortalCoefficient,-0.001,1.001)
+            
+            holoPos(0,TempParent:toWorld(mix(Pos2L,Pos1,PortalCoefficient)))
+            setRelativeAng(TempParent,ReqPortal[1,entity],PortalCoefficient)    
+
+            if(PortalCoefficient > 1){
+                #if you reach your destination    
+
+                CurrentZone = DestIndex
+                initVariables()
+                
+                dsSendDirect("activezone",CurrentMap,CurrentZone)
+                
+                PortalCoefficient = TravelMode = 0
+
+                Pos = Pos2
+                
+                if(Zone[2,string] == "poly"){
+                    
+                    CP = ReqPortal[3,number] + 1
+                    CIndex = floor(CP) - 1
+                    
+                }
+                
+            }                
+   
+        }
+        
+    }
+    
+}
+
+elseif(keyClk()){
+        
+    W = User:keyPressed(UseKeys[1,string])
+    A = User:keyPressed(UseKeys[2,string])
+    S = User:keyPressed(UseKeys[3,string])
+    D = User:keyPressed(UseKeys[4,string])
+    Sprint = User:keyPressed(UseKeys[5,string])
+    M1 = User:keyPressed(UseKeys[7,string])
+    M2 = User:keyPressed(UseKeys[8,string])
+    FootplatePod["Eject",number] = User:keyPressed("E")
+    
+}
+
+elseif(dsClk()){
+    
+    DsName = dsClkName()
+    
+    ReqEnt = dsGetSender()
+          
+    if(DsName == "mapupdate"){
+                
+        Map = dsGetTable()
+        
+        updateTables()
+        
+        if(!IsDriving){
+            
+            refreshMapTable()
+            resetPos()
+            
+        }
+        
+        initVariables()
+        
+        if(changed(1)){
+            
+            FootplateParent = ZoneParent
+            
+            FootplateDefaultPos = ZoneParent:toLocal(FootplateDefaultPos)
+            FootplateDefaultAng = ZoneParent:toLocal(FootplateDefaultAng)
+            
+        }
+        
+    }
+    if(DsName == "globalconfirm"){
+        
+        ReqPortal = dsGetTable()
+                
+        TravelMode = 2
+        
+        Pos1 = Pos
+        Pos2 = ReqPortal[2,vector]
+        
+        DestIndex = ReqPortal[3,number]
+        
+        TempParent = ZoneParent
+        
+        dsSendDirect("breakconnection",CurrentMap,1) #send connection break information to current map
+        CurrentMap = ReqEnt
+        dsSendDirect("maprequest",CurrentMap,0) #send request to new map
+
+        
+    }
+    
+}
+
+elseif(clk("parent")){
+    
+    Footplate:parentTo(holoEntity(1))
+    
+    holoPos(0,FootplateDefaultPos)
+    holoAng(1,FootplateDefaultAng)
+        
+    CurrentMap = NativeMap
+    dsSendDirect("maprequest",CurrentMap,1) #initial areamap request for the native areamap
+    
+    setNative()
+
+    interval(100)
+    
+}
+
+elseif(last()){
+    
+    Footplate:deparent()
+    
+}
+
+
+
