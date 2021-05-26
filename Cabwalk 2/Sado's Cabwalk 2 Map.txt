@@ -1,4 +1,4 @@
-@name Sado's Cabwalk 2.TEST Map
+@name Sado's Cabwalk 2.TEST2 Map
 @inputs [Ent1 Ent2 Ent3 Ent4 Ent5]:entity   #Here you can add more if you use more than 5 parent entities
 @outputs NativeMap:entity [ActiveZones ActivePortals]:table
 
@@ -465,9 +465,9 @@ if(dsClk()){
 
                     }
                     #temporary debug holos
-                    EE = randint(1,20)
-                    holoCreate(910+EE)
-                    holoPos(910+EE,GA[3,entity]:toWorld(PosLocalGlobal))
+                    #EE = randint(1,20)
+                    #holoCreate(910+EE)
+                    #holoPos(910+EE,GA[3,entity]:toWorld(PosLocalGlobal))
                     
                     #the foreign global position local to the entity of the local global portal
                     ReqPosLocal = GA[3,entity]:toLocal(ReqPortal[1,entity]:toWorld(ReqPortal[2,vector]))                    
