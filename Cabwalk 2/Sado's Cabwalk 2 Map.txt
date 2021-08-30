@@ -1,20 +1,26 @@
-@name Sado's Cabwalk 2.TEST2 Map
+@name Sado's Cabwalk 2.0.0 Map
 @inputs [Ent1 Ent2 Ent3 Ent4 Ent5]:entity   #Here you can add more if you use more than 5 parent entities
 @outputs NativeMap:entity [ActiveZones ActivePortals]:table
+@persist [Map Areas Polygons Portals Global Indexes Selectable PolyImport RenderPortals ImportedPortal ReqPortal TheGlobal RequestGlobal Children]:table Wave Wave2 XCount PCount ReqEnt:entity
+if(first()|dupefinished()|inputClk()){#[@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@          @@@@@@@@@@@@@       @@@@@@@@@@@            @@@@@@@@     @@@     @@@    @@@@@@@@@@@@       @@@@@@@@@@@     @@@@@@@@@@@@@@    @@     @@@@@@@@@@
+@@@@@@@@@@     @@@    @@@@@@@@@@@         @@@@@@@@@@     @@@     @@@@@@@@     @       @    @@@@@@@@@@@@         @@@@@@@@@@     @@@@@@@@@@@@@@         @@@@@@@@@@@@
+@@@@@@@@@@    @@@@@@@@@@@@@@@@@@    @@@    @@@@@@@@@            @@@@@@@@@@                @@@@@@@@@@@@    @@@    @@@@@@@@@     @@@@@@@@@@@@@@          @@@@@@@@@@@
+@@@@@@@@@@     @@@    @@@@@@@@@             @@@@@@@@     @@@     @@@@@@@@@@       @@      @@@@@@@@@@@             @@@@@@@@           @@@@@@@@    @@     @@@@@@@@@@
+@@@@@@@@@@@@         @@@@@@@@@     @@@@@     @@@@@@@           @@@@@@@@@@@@@     @@@@    @@@@@@@@@@@     @@@@@     @@@@@@@           @@@@@@@@    @@@@     @@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-@persist [Map Areas Polygons Portals Global Indexes Selectable PolyImport RenderPortals ImportedPortal ReqPortal TheGlobal RequestGlobal Children]:table 
-@persist Wave Wave2 XCount PCount ReqEnt:entity
 
-if(duped()){reset()}
-if(first()|inputClk()){#[
     
     Welcome to Sado's Cabwalk Map E2. This is used for storing walkable maps for use with the simulator.
     
     Use the editor e2 to create a map and import it below.
     
-    Link the entity baseplates in the same order they were selected in to make the areamap. You will usually only use Ent1, unless your vehicle is articulated.
-    
-    
+    Link the entity baseplates in the same order they were selected in to make the areamap. You will usually only use Ent1, unless your vehicle is articulated (eg. tender).
+
+    Remember to reload the e2 after linking all inputs!
     
     ]#
 
@@ -24,6 +30,20 @@ if(first()|inputClk()){#[
     #Paste the exported config from the editor down below.
     
 
+Areas = table(
+#Area(Area) 1
+table( 1 , "area" , Ent1 , vec(93.75,-66.85,-4.1) , vec(74.7,75.1,0) )
+)
+Polygons = table(
+#Area(Poly) 2
+table( 2 , "poly" , Ent1 , array(
+vec(71.1,35,-4.1),vec(129.2,57.9,-4.4),vec(78.3,89,-4.3),vec(186.9,83.4,-4.7)
+),0 )
+)
+Portals = table(
+#Portal 1
+table( 3 , "portal" , 1 , 2 , vec(91.5,-29.3,-4.1) , 0 , 6 , 6 , 1 , 0 )
+)
 
 
 
@@ -34,9 +54,8 @@ if(first()|inputClk()){#[
 
 
 
-
-    #Warranty void if e2 is tampered beyond this line 
-    #---------------------------------------------------------
+#Warranty void if e2 is tampered beyond this line 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
     Map = table()
@@ -92,7 +111,7 @@ if(first()|inputClk()){#[
     }
     else{
         
-        hint("Error! Please import an areamap from the editor.",5)
+        hint("Error! Please import a map from the editor.",5)
         
     }
     
@@ -103,7 +122,7 @@ if(first()|inputClk()){#[
     }
     
 }
-if(first()){
+if(first()|dupefinished()){
     
     ActivePortals = table()
     ActiveZones = table()
@@ -465,9 +484,9 @@ if(dsClk()){
 
                     }
                     #temporary debug holos
-                    #EE = randint(1,20)
-                    #holoCreate(910+EE)
-                    #holoPos(910+EE,GA[3,entity]:toWorld(PosLocalGlobal))
+                    EE = randint(1,20)
+                    holoCreate(910+EE)
+                    holoPos(910+EE,GA[3,entity]:toWorld(PosLocalGlobal))
                     
                     #the foreign global position local to the entity of the local global portal
                     ReqPosLocal = GA[3,entity]:toLocal(ReqPortal[1,entity]:toWorld(ReqPortal[2,vector]))                    
