@@ -1,11 +1,20 @@
-@name Sado's Cabwalk 2.TEST Editor
+@name Sado's Cabwalk 2.0.0 Editor
 @inputs [Ent1 Ent2 Ent3 Ent4 Ent5]:entity   #ONLY USED FOR IMPORTING!! Here you can add more if you use more than 5 parent entities
-@persist [DeleteQuery IndexedEnts]:array [Areas Polygons Portals Map Indexes Selectable Temp PolyImport RenderPortals ExportMap EAreas EPolygons EPortals]:table 
-@persist [O LastParent]:entity [Step SoundConfirm SoundDone SoundFail SoundCancel]:string IndexA IndexB IndexC Wave Wave2 XCount PCount Crowbar Editing Spawn SelZone
+@outputs XCount [DeleteQuery IndexedEnts]:array Deparented
+@persist [Areas Polygons Portals Map Indexes Selectable Temp PolyImport RenderPortals ExportMap EAreas EPolygons EPortals]:table 
+@persist [O LastParent]:entity [Step SoundConfirm SoundDone SoundFail SoundCancel Version]:string IndexA IndexB IndexC Wave Wave2 XCount PCount Crowbar Editing Spawn SelZone
 @model models/props_c17/oildrum001.mdl
+if(first()){#[@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@          @@@@@@@@@@@@@       @@@@@@@@@@@            @@@@@@@@     @@@     @@@    @@@@@@@@@@@@       @@@@@@@@@@@     @@@@@@@@@@@@@@    @@     @@@@@@@@@@
+@@@@@@@@@@     @@@    @@@@@@@@@@@         @@@@@@@@@@     @@@     @@@@@@@@     @       @    @@@@@@@@@@@@         @@@@@@@@@@     @@@@@@@@@@@@@@         @@@@@@@@@@@@
+@@@@@@@@@@    @@@@@@@@@@@@@@@@@@    @@@    @@@@@@@@@            @@@@@@@@@@                @@@@@@@@@@@@    @@@    @@@@@@@@@     @@@@@@@@@@@@@@          @@@@@@@@@@@
+@@@@@@@@@@     @@@    @@@@@@@@@             @@@@@@@@     @@@     @@@@@@@@@@       @@      @@@@@@@@@@@             @@@@@@@@           @@@@@@@@    @@     @@@@@@@@@@
+@@@@@@@@@@@@         @@@@@@@@@     @@@@@     @@@@@@@           @@@@@@@@@@@@@     @@@@    @@@@@@@@@@@     @@@@@     @@@@@@@           @@@@@@@@    @@@@     @@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-if(first()){
-    #[
+
     PLEASE MAKE SURE TO READ THESE INSTRUCTIONS BEFORE CREATING A MAP
     
     Welcome to Sado's Cabwalk Editor E2. You can use this tool to create a map.
@@ -51,7 +60,7 @@ if(first()){
 
     Copy this configuration and paste it into the map E2.
     
-    After you've exported the configuration, you can delete this E2.
+    After you've exported the configuration and made sure the export is whole, you can delete this E2.
     
     
     
@@ -69,8 +78,6 @@ if(first()){
 
 
 
-    
-    
     #[
     
     Areas is a table of tables consisting of:
@@ -98,7 +105,7 @@ if(first()){
         [7,number] - A node radius
         [8,number] - B node radius
         [9,number] - portal unlocked
-        [10,number] - portal type
+        [10,number] - portal type (unused)
     Global:
         [1,number] - global index
         [2,string] - type
@@ -106,14 +113,14 @@ if(first()){
         [4,vector/number] - pos coefficient
         [5,number] - node radius
         [6,number] - effect radius
+
+    ]#    
     
-    #Warranty void if e2 is tampered beyond this line 
-    #---------------------------------------------------------    
-    ]#
+#Warranty void if e2 is tampered beyond this line 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
     
-    
-    
-    
+    Version = "2.0.0" 
     
     Interpolate = array()
     Indexes = table(table(),table())
@@ -157,12 +164,12 @@ if(first()){
             local X = Portals[I,table]
             Map[X[1,number],table] = X
             
-            #if(X[2,string] == "portal" & Map[X[3,number],table][3,entity] != Map[X[4,number],table][3,entity]){
+            if(X[2,string] == "portal" & Map[X[3,number],table][3,entity] != Map[X[4,number],table][3,entity]){
                 
-                #X:pushNumber(I)
-                #RenderPortals:pushTable(X)
+                X:pushNumber(I)
+                RenderPortals:pushTable(X)
                 
-            #}
+            }
             
         }
         
@@ -178,6 +185,30 @@ if(first()){
     SoundFail = "buttons/button10.wav"
     SoundCancel = "buttons/button11.wav"
 
+    function colorprint(Message:string){
+        
+        printColor(vec(255),"[",vec(50,200,100),"Cabwalk",vec(255),"] "+Message)
+        
+    }
+    
+    function errorprint(Message:string){
+        
+        printColor(vec(255),"[",vec(50,200,100),"Cabwalk",vec(255),"] ",vec(200,50,50),"Error! "+Message)            
+        
+    }
+    
+    function blankprint(Message:string){
+        
+        printColor(vec(255),Message)
+        
+    }
+    
+    function exportprint(Message:string){
+        
+        printColor(vec(225,50,225),Message)
+        
+    }    
+    
     function string vecToString(Vector:vector){
         
         return "vec("+Vector:x()+","+Vector:y()+","+Vector:z()+")"
@@ -313,7 +344,7 @@ if(first()){
     }    
     
     function popIndex(Type){
-        
+
         local Table = Indexes[Type,table]
                 
         local Index = Table:count()
@@ -325,32 +356,37 @@ if(first()){
         for(I = 1,NumCount){
 
             HoloIndex += 1
-    
             holoDelete(HoloIndex)
             
         }        
         
     }
 
-    function deparentIndex(Type){
+    function deparentIndex(){ #This would be on my list of rewrites if i ever get to it. deparenting and parenting ALL indexes is inefficient and might lead to a crash with many indexes.
         
-        local Table = Indexes[Type,table]
-                
-        local Index = Table:count()
-        local Numbers = Index:toString():explode("")
-        local NumCount = Numbers:count()
-        local Offset = 1000+500*Type
-        local HoloIndex = Offset + Table[Table:count(),number] - NumCount
-
-        for(I = 1,NumCount){
-
-            HoloIndex += 1
-    
-            holoParent(HoloIndex,entity())
-            holoPos(HoloIndex,entity():pos())
+        for(I = 1,2){
             
-        }        
+            local Table = Indexes[I,table]
+    
+            for(J = 1, Table:count()){
+                
+                Entry = Table[J,number]
+                local Numbers = Entry:toString():explode("")
+                local NumCount = Numbers:count()
+                local Offset = 1000+500*I
+                local HoloIndex = Offset + Table[Entry,number] - NumCount
+                
+                for(K = 1,NumCount){
         
+                    HoloIndex += 1
+                    holoParent(HoloIndex,entity())
+                    holoPos(HoloIndex,entity():pos())
+                    
+                } 
+                
+            }
+                   
+        }
     }
 
     function thiccIndex(Type,Entry,Thickness){
@@ -373,9 +409,8 @@ if(first()){
     }
     
     function reparentIndex(Type,Entry,ParentEnt:entity,Thickness){
-
+        
         local Table = Indexes[Type,table]
-
         local Numbers = localGlobal(Entry):toString():explode("")
         local NumCount = Numbers:count()
         local Offset = 1000+500*Type
@@ -384,12 +419,11 @@ if(first()){
         for(I = 1,NumCount){
 
             HoloIndex += 1
-                        
             holoParent(HoloIndex,ParentEnt)
             holoPos(HoloIndex,ParentEnt:toWorld(vec(1+NumCount-2*I,0,0)))
             holoAng(HoloIndex,ParentEnt:toWorld(ang(0,0,90)))
             holoScale(HoloIndex,vec(0.2,Thickness,0.2))
-            
+
         }        
         
     }
@@ -462,18 +496,20 @@ if(first()){
 
     function deletePortal(Global){
         
-        deparentIndex(1)
+        deparentIndex()
 
+        for(I = 498+Portals:count()*2,499+Portals:count()*2){
+                
+            holoDelete(I)
+            
+        }  
+                
         holoDelete(Map:count())
 
         popIndex(2)
 
         Map:removeTable(Global)
-        for(I = 498+Portals:count()*2,499+Portals:count()*2){
-            
-            holoDelete(I)
-            
-        }        
+       
                 
         for(I=Global,Map:count()){
             
@@ -502,15 +538,15 @@ if(first()){
             }            
 
         }
-        
+
     }
     
     function deleteZone(Local){#this was one of the worst things to program you don't even know
 
         Global = Selectable[Local,table][1,number]
-
-        deparentIndex(2)
-
+        
+        deparentIndex()
+        
         holoDelete(Map:count())
 
         popIndex(1)
@@ -572,38 +608,42 @@ if(first()){
             
         }
 
-        timer("delete",100)
-
-#[        for(I=1,DeleteQuery:count()){
-            
-            updateTables()
-            deletePortal(DeleteQuery[I,number]-I+1)   #Delete the portals after the previous loops are done, for simplicity sake
-            
-        }
-        
-        DeleteQuery = array()]#
-                    
+        timer("delete",1000)
+         
     }
     
     interval(100)
+
+    #ifdef httpRequest(string)
+    
+        httpRequest("https://raw.githubusercontent.com/Sadogus/cabwalk2/main/version.txt")
+        runOnHTTP(1)
+        
+    #else
+    
+        colorprint("HTTP Core is disabled on your server. Automatic version checking is disabled.")
+        
+    #endif 
 
 }
 elseif(clk("delete")){
 
     updateTables()
-
-    deletePortal(DeleteQuery:popNumber())
-            
-    if(DeleteQuery:count()!=0){
-        
-        timer("delete",1000)
     
+    if(DeleteQuery:count()){
+        
+        Query = DeleteQuery:popNumber()
+        
+        deletePortal(Query)
+
+        timer("delete",1000)
+        
     }
     else{
         
         updateTables()
         
-        Spawn = XCount = PCount = Wave = 0
+        Deparented = Spawn = XCount = PCount = Wave = 0
         Wave2 = 1
         
         timer("import",1000)
@@ -612,7 +652,6 @@ elseif(clk("delete")){
     
 }
 elseif(clk("import")){
-    
     if(Spawn){
     
         Wave+=3
@@ -629,7 +668,7 @@ elseif(clk("import")){
         if(I <= Map:count()){
 
             String = Map[I,table][2,string]
-            
+
             switch(String){
                 
                 case "area",
@@ -687,7 +726,7 @@ elseif(clk("import")){
                 break
     
                 case "portal",
-                    
+                                        
                     local X = Map[I,table]
                     local A1 = Map[X[3,number],table]
                     local A2 = Map[X[4,number],table]
@@ -798,7 +837,7 @@ elseif(clk("import")){
                         reparentIndex(2,I,holoEntity(I),Map[I,table][5,number]/1.5)
                         
                     }    
-    
+
                     holoMaterial(I,"models/debug/debugwhite")
                     holoDisableShading(I,0)                                    
                     holoParent(I,AP1)
@@ -808,15 +847,13 @@ elseif(clk("import")){
                     holoScale(I,vec(X[5,number]/6))
     
                     holoModel(Point1,"hqsphere")
-                    holoPos(Point1,holoEntity(I):pos())
-                    holoParent(Point1,I)
+                    holoParent(Point1,AP1)
                     holoScale(Point1,vec(Radius/6))
                     holoDisableShading(Point1,1)
                     holoColor(Point1,vec4(255,255,255,5))
                 
                     holoModel(Point2,"hqsphere")
-                    holoPos(Point2,holoEntity(I):pos())
-                    holoParent(Point2,I)
+                    holoParent(Point2,AP1)
                     holoScale(Point2,vec(-Radius/6))
                     holoDisableShading(Point2,1)
                     holoColor(Point2,vec4(255,255,255,5))
@@ -838,6 +875,8 @@ elseif(clk("import")){
                         
                     }
     
+                    holoPos(Point1,holoEntity(I):pos())
+                    holoPos(Point2,holoEntity(I):pos())
                     
                     XCount += 2
       
@@ -884,7 +923,7 @@ elseif(clk("import")){
                 
         Spawn = 0
         updateTables()
-        print("Map rendered.")
+        colorprint("Map rendered.")
         O:soundPlay(1,0,SoundDone)
 
     }
@@ -1117,7 +1156,7 @@ elseif(chatClk(O)){
                     }
                     else{
                     
-                        print("Error! You are already creating something. Press R with the crowbar to undo/cancel.")
+                        errorprint("You are already creating something. Press R with the crowbar to undo/cancel.")
                         O:soundPlay(1,0,SoundFail)
                     
                     }                
@@ -1138,7 +1177,7 @@ elseif(chatClk(O)){
                     }
                     else{
                     
-                        print("Error! You are already creating something. Press R with the crowbar to undo/cancel.")
+                        errorprint("You are already creating something. Press R with the crowbar to undo/cancel.")
                         O:soundPlay(1,0,SoundFail)
                     
                     }                
@@ -1161,13 +1200,13 @@ elseif(chatClk(O)){
                     }
                     elseif(Editing){
                     
-                        print("Error! You are already creating something. Press R with the crowbar to undo/cancel.")
+                        errorprint("You are already creating something. Press R with the crowbar to undo/cancel.")
                         O:soundPlay(1,0,SoundFail)
                     
                     }
                      else{
                         
-                        print("Error! You need at least one area/poly to create a portal.")
+                        errorprint("You need at least one area/poly to create a portal.")
                         O:soundPlay(1,0,SoundFail)
                         
                     }                           
@@ -1192,13 +1231,13 @@ elseif(chatClk(O)){
                     }
                     elseif(Editing){
                     
-                        print("Error! You are already creating something. Press R with the crowbar to undo/cancel.")
+                        errorprint("You are already creating something. Press R with the crowbar to undo/cancel.")
                         O:soundPlay(1,0,SoundFail)
                     
                     }
                      else{
                         
-                        print("Error! You need at least one area/poly to create a portal.")
+                        errorprint("You need at least one area/poly to create a portal.")
                         O:soundPlay(1,0,SoundFail)
                         
                     }                     
@@ -1236,7 +1275,7 @@ elseif(chatClk(O)){
                     else{
                         
                         O:soundPlay(1,0,SoundFail)
-                        print("Error! You can only change node sizes while creating portals or global portals.")
+                        errorprint("You can only change node sizes while creating portals or global portals.")
                         
                     }       
                                      
@@ -1253,7 +1292,7 @@ elseif(chatClk(O)){
                         if(Word3Num > 300){
                             
                             O:soundPlay(1,0,SoundFail)
-                            print("Error! Max radius size is 300.")                            
+                            errorprint("Max radius size is 300.")                            
                             
                         }
                         else{
@@ -1269,7 +1308,7 @@ elseif(chatClk(O)){
                     else{
                         
                         O:soundPlay(1,0,SoundFail)
-                        print("Error! You can only change radius sizes while creating global portals.")
+                        errorprint("You can only change radius sizes while creating global portals.")
                         
                     }       
                                      
@@ -1281,7 +1320,7 @@ elseif(chatClk(O)){
                     if(!Editing){
 
                         ExportMap = Map:clone()
-                        print("Exporting...")
+                        colorprint("Exporting...")
                         
                         Wave = 0
                         Wave2 = 1
@@ -1292,7 +1331,7 @@ elseif(chatClk(O)){
                     }
                     else{
                         
-                        print("Error! Finish or cancel before exporting.")
+                        errorprint("Finish or cancel before exporting.")
                         O:soundPlay(1,0,SoundFail)
                         
                     }                        
@@ -1348,13 +1387,13 @@ elseif(chatClk(O)){
                         updateTables()
                         
                         O:soundPlay(1,0,SoundDone)
-                        print("Undone.")
+                        colorprint("Undone.")
                         
                     }
                     else{
                     
                         O:soundPlay(1,0,SoundFail)
-                        print("There is nothing to undo.")
+                        colorprint("There is nothing to undo.")
                     
                     }             
                                
@@ -1363,7 +1402,7 @@ elseif(chatClk(O)){
                 case "s",
                 case "sel",
                     
-                    if(Step == "portal1" | Step == "portal2"){
+                    if(Step == "portal1" | Step == "portal2" | Step == "global1"){
                         
                         local Word3 = Words[3,string]
                         local Word3Num = Word3:toNumber()
@@ -1401,7 +1440,7 @@ elseif(chatClk(O)){
                         else{
                             
                             O:soundPlay(1,0,SoundFail)
-                            print("Error! Area "+Word3+" does not exist!")
+                            errorprint("Area "+Word3+" does not exist!")
                             
                             }
                         
@@ -1409,7 +1448,7 @@ elseif(chatClk(O)){
                     else{
                         
                         O:soundPlay(1,0,SoundFail)
-                        print("Error! You can only select areas when making portal nodes.")
+                        errorprint("You can only select areas when making portal nodes.")
                         
                     }
                     
@@ -1437,12 +1476,12 @@ elseif(chatClk(O)){
                             timer("import",0)
 
                             O:soundPlay(1,0,"ambient/levels/labs/equipment_printer_loop1.wav")
-                            print("Rerendering map. Do not panic.")
+                            colorprint("Rerendering map. Do not panic.")
                             
                         }
                         else{
                             
-                            print("Error! You can only delete a portal between 1 and "+Portals:count())
+                            errorprint("You can only delete a portal between 1 and "+Portals:count())
                             
                         }
                         
@@ -1454,19 +1493,19 @@ elseif(chatClk(O)){
                             deleteZone(Word4Num)
 
                             O:soundPlay(1,0,"ambient/levels/labs/equipment_printer_loop1.wav")
-                            print("Rerendering map. Do not panic.")
+                            colorprint("Rerendering map. Do not panic.")
                             
                         }                        
                         else{
                             
-                            print("Error! You can only delete an area between 1 and "+Selectable:count())
+                            errorprint("You can only delete a zone between 1 and "+Selectable:count())
                             
                         }
                                                 
                     }
                     else{
                         
-                        print("Error! You can only delete areas or portals. (area|portal)")
+                        errorprint("You can only delete zones or portals. (z|x)")
                         
                     }                    
                     
@@ -1475,7 +1514,7 @@ elseif(chatClk(O)){
                 default,
                 
                     O:soundPlay(1,0,SoundFail)
-                    print("Error! Invalid input.")
+                    errorprint("Invalid input.")
                     
                 break
 
@@ -1486,11 +1525,11 @@ elseif(chatClk(O)){
             
             if(!Crowbar){
                 
-                print("Error! You must be holding the crowbar to create.")
+                errorprint("You must be holding the crowbar to create.")
             }
             elseif(Spawn){
                 
-                print("Error! Wait for the map to be imported/rerendered.")
+                errorprint("Wait for the map to be imported/rerendered.")
                 
             }
             
@@ -1509,7 +1548,7 @@ elseif(changed(Step)){
         case "area1",
         case "poly1",
             
-            print("You are now creating "+( Step == "area1" ? "an area" : "a polygon")+". Left click the parent entity. Press R to cancel. Right click to select the previous used parent entity.")
+            colorprint("You are now creating "+( Step == "area1" ? "an area" : "a polygon")+". Left click the parent entity. Press R to cancel. Right click to select the previous used parent entity.")
             
             local AimEnt = !owner():aimEntity():isPlayer() ? owner():aimEntity() : noentity()
             
@@ -1527,7 +1566,7 @@ elseif(changed(Step)){
         case "area2",
         case "poly2",
             
-            print("Left click one end of the "+( Step == "area2" ? "area" : "polygon")+" to start. Press R to undo.")
+            colorprint("Left click one end of the "+( Step == "area2" ? "area" : "polygon")+" to start. Press R to undo.")
 
             holoParent(IndexA,Temp[3,entity])
             holoAng(IndexA,Temp[3,entity]:angles())
@@ -1538,7 +1577,7 @@ elseif(changed(Step)){
         
         case "area3",
         
-            print("Left click the other end of the area. Press R to undo.")
+            colorprint("Left click the other end of the area. Press R to undo.")
             
             holoModel(IndexA,"models/hunter/blocks/cube2x2x2.mdl")
             
@@ -1546,7 +1585,7 @@ elseif(changed(Step)){
                 
         case "area4",
             
-            print("Choose the height of the area. (Usually by left clicking the ground) Press R to undo.")
+            colorprint("Choose the height of the area. (Usually by left clicking the ground) Press R to undo.")
             
             holoScale(IndexA,holoScale(IndexA)*vec(1,1,0)+vec(0,0,0.01))     
             
@@ -1554,11 +1593,12 @@ elseif(changed(Step)){
         
         case "portal1",
             
-            print("You are now creating a portal. Right click to cycle through areas. Type '-c node <number>' to change the node radius. Type '-c sel <number>' to select area. Left click to place a node. Press R to cancel.")
+            colorprint("You are now creating a portal. Right click to cycle through areas. Type '-c node <number>' to change the node radius. Type '-c sel <number>' to select area. Left click to place a node. Press R to cancel.")
             
             SelZone = 1
 
             holoCreate(IndexA)
+            holoParent(IndexA,holoEntity(Selectable[SelZone,table][1,number]))
             holoMaterial(IndexA,"models/debug/debugwhite")
             holoScale(IndexA,vec(0.1))
             holoModel(IndexA,"models/hunter/blocks/cube2x2x2.mdl")
@@ -1600,7 +1640,7 @@ elseif(changed(Step)){
         
         case "portal2",
             
-            print("Now select the other side of the portal. Right click to cycle through areas. Type '-c node <number>' to change the node radius. Type '-c sel <number>' to select area. Press R to cancel.")
+            colorprint("Now select the other side of the portal. Right click to cycle through areas. Type '-c node <number>' to change the node radius. Type '-c sel <number>' to select area. Press R to cancel.")
             
             SelZone = 1
 
@@ -1636,8 +1676,8 @@ elseif(changed(Step)){
 
         case "global1",
             
-            print("You are now creating a global portal. Right click to cycle through areas. Type '-c node <number>' to change the node radius. Type '-c radius <number>' to change the search radius.")
-            print("Type '-c sel <number>' to select area. Left click to place a node. Press R to cancel.")
+            colorprint("You are now creating a global portal. Right click to cycle through areas. Type '-c node <number>' to change the node radius. Type '-c radius <number>' to change the search radius.")
+            colorprint("Type '-c sel <number>' to select area. Left click to place a node. Press R to cancel.")
                         
             Radius = Temp[6,number]
             Node = Temp[5,number]
@@ -1725,7 +1765,7 @@ if(keyClk()){
                     }
                     else{
                         
-                        print("Error! Invalid entity. Try again.")
+                        errorprint("Invalid entity. Try again.")
                         O:soundPlay(1,0,SoundFail)
                         
                     }
@@ -1742,7 +1782,7 @@ if(keyClk()){
                     }
                     else{
                         
-                        print("Error! There is no previous selected parent.")
+                        errorprint("There is no previous selected parent.")
                         O:soundPlay(1,0,SoundFail)
                         
                     }
@@ -1750,7 +1790,7 @@ if(keyClk()){
                 } 
                 elseif(R){
                     
-                    print("Cancelled "+(Step == "area1" ? "area" : "polygon")+" creation.")
+                    colorprint("Cancelled "+(Step == "area1" ? "area" : "polygon")+" creation.")
                     
                     Step = ""
                     Editing = 0
@@ -1818,7 +1858,7 @@ if(keyClk()){
                     holoPos(IndexA,Temp[3,entity]:toWorld(Temp[4,vector]))
                     
                     O:soundPlay(1,0,SoundDone) 
-                    print("Area done.")
+                    colorprint("Area done.")
 
                     Map:pushTable(Temp)
                     updateTables()
@@ -1845,7 +1885,7 @@ if(keyClk()){
                     Temp[4,array][1,vector] = AimPosLocal
                     Step = "poly3"
 
-                    print("Left click to create a vertex. Press R to undo.")
+                    colorprint("Left click to create a vertex. Press R to undo.")
         
                     pushIndex(1,holoEntity(IndexA),1)
                     
@@ -1874,7 +1914,7 @@ if(keyClk()){
                     if(Pitch>45|Pitch<-45){
                         
                         O:soundPlay(1,0,SoundFail)
-                        print("Error! Too steep angle. Use portals for ladders etc.")
+                        errorprint("Too steep angle. Use portals for ladders etc.")
                         
                     }
                     else{
@@ -1892,7 +1932,7 @@ if(keyClk()){
                         
                         IndexA = 1000+PCount
     
-                        print("Left click to create a vertex. Right click to finish polygon. Press R to undo.")
+                        colorprint("Left click to create a vertex. Right click to finish polygon. Press R to undo.")
                                     
                         holoCreate(IndexA)
                         holoParent(IndexA,Temp[3,entity])
@@ -1928,7 +1968,7 @@ if(keyClk()){
                     if(Pitch>45|Pitch<-45){
 
                         O:soundPlay(1,0,SoundFail)
-                        print("Error! Too steep angle. Use portals for ladders etc.")
+                        errorprint("Too steep angle. Use portals for ladders etc.")
                         
                     }
                     else{
@@ -1945,7 +1985,7 @@ if(keyClk()){
     
                         IndexA = 1000+PCount
     
-                        print("Left click to create a vertex. Right click to finish polygon. Press R to undo.")
+                        colorprint("Left click to create a vertex. Right click to finish polygon. Press R to undo.")
                                     
                         holoCreate(IndexA)
                         holoParent(IndexA,Temp[3,entity])
@@ -1958,7 +1998,7 @@ if(keyClk()){
                 elseif(M2){
                     
                     O:soundPlay(1,0,SoundDone) 
-                    print("Polygon done.")
+                    colorprint("Polygon done.")
 
                     Map:pushTable(Temp)
                     updateTables()
@@ -2070,7 +2110,7 @@ if(keyClk()){
                     }
                                                    
                     O:soundPlay(1,0,SoundCancel)
-                    print("Cancelled portal creation.")
+                    colorprint("Cancelled portal creation.")
                     
                 }
                 elseif(M2){
@@ -2166,7 +2206,7 @@ if(keyClk()){
                     }
                     
                     O:soundPlay(1,0,SoundDone) 
-                    print("Portal done.")
+                    colorprint("Portal done.")
                     
                     Map:pushTable(Temp)
                     updateTables()
@@ -2278,7 +2318,7 @@ if(keyClk()){
                     }
                     
                     O:soundPlay(1,0,SoundDone) 
-                    print("Global portal done.")
+                    colorprint("Global portal done.")
                     
                     Map:pushTable(Temp)
 
@@ -2312,7 +2352,7 @@ if(keyClk()){
                     }
                                                   
                     O:soundPlay(1,0,SoundCancel)
-                    print("Cancelled global portal creation.")
+                    colorprint("Cancelled global portal creation.")
 
                     popIndex(2)
                     
@@ -2406,8 +2446,8 @@ elseif(clk("export1")){
             timer("export2",100)
             Wave = 0
             Wave2 = 1
-            print("#COPY EVERYTHING BELOW AND PASTE IT INTO THE MAP E2
-Areas = table(")
+            printColor(vec(50,200,100),"#COPY EVERYTHING BELOW AND PASTE IT INTO THE MAP E2")
+            exportprint("Areas = table(")
             
             EAreas:clear()
             EPolygons:clear()
@@ -2465,7 +2505,7 @@ elseif(clk("export2")){
             
             local A = EAreas[I,table]
 
-            print("#Area(Area) "+localGlobal(A[1,number])+"
+            exportprint("#Area(Area) "+localGlobal(A[1,number])+"
 table( "+A[1,number]+" , \"area\" , Ent"+A[3,number]+" , "+vecToString(A[4,vector])+" , "+vecToString(A[5,vector])+" )"+(I == EAreas:count() ? "" : ","))
                                 
         }
@@ -2483,7 +2523,7 @@ table( "+A[1,number]+" , \"area\" , Ent"+A[3,number]+" , "+vecToString(A[4,vecto
             Wave = 0
             Wave2 = 1
             
-            print(")
+            exportprint(")
 Polygons = table(")
             
         }
@@ -2507,7 +2547,7 @@ elseif(clk("export3")){
             
             local A = EPolygons[I,table]
             
-            print("#Area(Poly) "+localGlobal(A[1,number])+"
+            exportprint("#Area(Poly) "+localGlobal(A[1,number])+"
 table( "+A[1,number]+" , \"poly\" , Ent"+A[3,number]+" , array(")
             for(J = 1,A[4,array]:count()){
                 
@@ -2517,13 +2557,13 @@ table( "+A[1,number]+" , \"poly\" , Ent"+A[3,number]+" , array(")
     
                 if(1+J/4 == 1+floor(J/4)){
                     
-                    print(String)
+                    exportprint(String)
                     String = ""
                     
                 }
                 
             }
-            print(String+"),"+A[5,number]+" )"+(I == EPolygons:count() ? "" : ","))
+            exportprint(String+"),"+A[5,number]+" )"+(I == EPolygons:count() ? "" : ","))
             String = ""
                                 
         }
@@ -2541,7 +2581,7 @@ table( "+A[1,number]+" , \"poly\" , Ent"+A[3,number]+" , array(")
             Wave = 0
             Wave2 = 1
             
-            print(")
+            exportprint(")
 Portals = table(")
             
         }
@@ -2567,7 +2607,7 @@ elseif(clk("export4")){
 
             if(A[2,string] == "portal"){
                 
-                print("#Portal "+I+"
+                exportprint("#Portal "+I+"
 table( "+A[1,number]+" , \"portal\" , "+A[3,number]+" , "+A[4,number]+" , "+
 (Map[A[3,number],table][2,string] == "area" ? vecToString(A[5,vector]) : A[5,number]:toString())+" , "+
 (Map[A[4,number],table][2,string] == "area" ? vecToString(A[6,vector]) : A[6,number]:toString())+" , "+
@@ -2576,7 +2616,7 @@ A[7,number]+" , "+A[8,number]+" , "+A[9,number]+" , "+A[10,number]+" )"+(I == EP
             }
             else{
                 
-                print("#Portal "+I+" (Global)
+                exportprint("#Portal "+I+" (Global)
 table( "+A[1,number]+" , \"global\" , "+A[3,number]+" , "+
 (Map[A[3,number],table][2,string] == "area" ? vecToString(A[4,vector]) : A[4,number]:toString())+" , "+
 A[5,number]+" , "+A[6,number]+" )"+(I == EPortals:count() ? "" : ","))
@@ -2594,7 +2634,7 @@ A[5,number]+" , "+A[6,number]+" )"+(I == EPortals:count() ? "" : ","))
         }
         else{
             
-            print(")")
+            exportprint(")")
             O:soundPlay(1,0,SoundDone)
             
         }
@@ -2605,6 +2645,68 @@ A[5,number]+" , "+A[6,number]+" )"+(I == EPortals:count() ? "" : ","))
         timer("export4",1000)
         
     }    
+    
+}
+else{
+    
+    #HTTP Version Checking (thanks mag)
+    
+    #ifdef httpClk()
+    
+        if(httpClk()){
+
+            if(httpData()!=""){
+                
+                local Lines = httpData():explode("\n")
+                
+                local MasterVersion = Lines[1,string]:explode(":")[2,string]
+                local MVArray = MasterVersion:explode(".")
+                
+                local MasterName = Lines[2,string]:explode(":")[2,string]
+                local Changelog = Lines[3,string]:explode(":")[2,string]
+                
+                local MasterMajor = MVArray[2,string]:toNumber()
+                local MasterMinor = MVArray[3,string]:toNumber()
+                
+                local CurrentVersion = Version:explode(".")
+                local CurrentMajor = CurrentVersion[2,string]:toNumber()
+                local CurrentMinor = CurrentVersion[3,string]:toNumber()
+                
+                if((MasterMajor<CurrentMajor) | (MasterMinor<CurrentMinor)){
+                    
+                    colorprint("You are running a dev version of Cabwalk 2!")
+                    
+                }
+                elseif(MasterMajor > CurrentMajor){
+                    
+                    colorprint("There is a major update to Cabwalk 2 ("+MasterVersion+": "+MasterName+")! Changes:")
+                    blankprint(Changelog)
+                    blankprint("Go to https://github.com/Sadogus/cabwalk2 to update.")
+                    
+                    O:soundPlay(0,4,"buttons/button17.wav")
+                    soundVolume(0,0.5)
+                    
+                }
+                elseif(MasterMinor > CurrentMinor){
+                    
+                    colorprint("There is a minor update to Cabwalk 2 ("+MasterVersion+": "+MasterName+"). Changes:")
+                    blankprint(Changelog)
+                    blankprint("Go to https://github.com/Sadogus/cabwalk2 to update.")
+                    
+                    O:soundPlay(0,2,"buttons/button17.wav")
+                    
+                }
+                
+            }
+            else{
+                
+                print("Could not find the version info online.")
+                
+            }
+            
+        }
+        
+    #endif
     
 }
 
