@@ -1,15 +1,19 @@
-@name Sado's Cabwalk 2.TEST Simulator
-@inputs NativeMap:entity [SeatPod FootplatePod CamController]:wirelink 
+@name Sado's Cabwalk 2.0.0 Simulator
+@inputs NativeMap:entity [SeatPod FootplatePod CamController EGP]:wirelink 
 @outputs KeyboardDisabled
-
-@persist TempCP CP IdealCP CIndex Coefficient PortalCoefficient PortalIndex DestIndex Active DirMoveDot CurrentZone ActivePortal YawOffset StopLoopback IsDriving SelectedPortalSide
-@persist Reset M1 M2 W A S D Sprint TravelMode WalkSpeed SprintSpeed PortalSpeed StartZone Mode RenderOrigin ProximityMode ProximityDist ReturnToOrigin AutoPortalMove 
-@persist [Pos Pos1 Pos1Ideal Pos2 Pos2L MoveDir AreaPos AreaScale FootplateDefaultPos]:vector
-@persist [User SDriver FDriver CurrentMap Footplate Seat H0 H1 ZoneParent TempParent ReqEnt FootplateParent]:entity
-@persist [ZoneType]:string [FootplateDefaultAng]:angle
-@persist [Map Zones Portals Zone LocalPortals UseKeys DestZone ReqPortal]:table
-
-if(first()|dupefinished()){#[
+@persist TempCP CP IdealCP CIndex Coefficient PortalCoefficient PortalIndex DestIndex Active DirMoveDot CurrentZone ActivePortal YawOffset StopLoopback IsDriving SelectedPortalSide TextSize
+@persist Reset M1 M2 W A S D Sprint TravelMode WalkSpeed SprintSpeed PortalSpeed StartZone Mode RenderOrigin ProximityMode ProximityDist ReturnToOrigin AutoPortalMove Res:vector2 
+@persist [Pos Pos1 Pos1Ideal Pos2 Pos2L MoveDir AreaPos AreaScale FootplateDefaultPos]:vector [User SDriver FDriver CurrentMap Footplate Seat H0 H1 ZoneParent TempParent ReqEnt FootplateParent]:entity
+@persist [ZoneType]:string [FootplateDefaultAng]:angle [Map Zones Portals Zone LocalPortals UseKeys DestZone ReqPortal]:table MoveSpeed MoveSin
+if(first()|dupefinished()){#[@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@          @@@@@@@@@@@@@       @@@@@@@@@@@            @@@@@@@@     @@@     @@@    @@@@@@@@@@@@       @@@@@@@@@@@     @@@@@@@@@@@@@@    @@     @@@@@@@@@@
+@@@@@@@@@@     @@@    @@@@@@@@@@@         @@@@@@@@@@     @@@     @@@@@@@@     @       @    @@@@@@@@@@@@         @@@@@@@@@@     @@@@@@@@@@@@@@         @@@@@@@@@@@@
+@@@@@@@@@@    @@@@@@@@@@@@@@@@@@    @@@    @@@@@@@@@            @@@@@@@@@@                @@@@@@@@@@@@    @@@    @@@@@@@@@     @@@@@@@@@@@@@@          @@@@@@@@@@@
+@@@@@@@@@@     @@@    @@@@@@@@@             @@@@@@@@     @@@     @@@@@@@@@@       @@      @@@@@@@@@@@             @@@@@@@@           @@@@@@@@    @@     @@@@@@@@@@
+@@@@@@@@@@@@         @@@@@@@@@     @@@@@     @@@@@@@           @@@@@@@@@@@@@     @@@@    @@@@@@@@@@@     @@@@@     @@@@@@@           @@@@@@@@    @@@@     @@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     Modes
         There are two methods of linking a simulator to an areamap: hybrid mode and footplate mode.
@@ -29,11 +33,26 @@ if(first()|dupefinished()){#[
         
 
     Linking Cabwalk
-        To link the cabwalk simulator to an map, you will need to spawn the map e2 with the given mapping. Link input "NativeMap" to the "NativeMap" on
-        the map native to the controller (in most cases this is the locomotive's map)
+        To link the cabwalk simulator to an map, you will need to spawn the map e2 with a map created using the editor. Link input "NativeMap" to the "NativeMap" on
+        the default map (in most cases this is the locomotive's map)
+        In the settings below, set the variable "StartZone" to the zone closest to the seat/footplate. You can see the zone ids by turning on "RenderMap" in the map e2.
+        Link input CamController to a camera controller connected to the footplate. Use following settings on the camera controller:
+            [X] Coordinates local to parent
+            [X] Client side movement
+            [ ] Free movement
+            [X] Localized movement
+            [ ] Client side zooming
+            [ ] Auto un-clip
+            [ ] Auto un-clip ignores water
+            [ ] Draw player
+            [ ] Draw parent
+        
         For hybrid mode, spawn a seat, footplate, and link a pod controller to each. Link input "SeatPod" and "FootplatePod" to the seat pod and footplate pod respectively
         For footplate mode, spawn a footplate and link a pod controller to it. Link input "FootplatePod" to the footplate pod and leave the "SeatPod" input unlinked.
-        In settings, set the variable "StartZone" to the zone closest to the seat/footplate. You can see the zone ids by turning on "RenderMap" in the map e2.
+        
+        OPTIONAL: You can link the EGP input to an EGP hud, connected to the footplate. This allows you to see button names.
+        
+        Remember to reload the e2 after linking all inputs!
 
 ]#
 
@@ -47,10 +66,10 @@ if(first()|dupefinished()){#[
     SprintSpeed = 12        #Speed while holding down shift.
     PortalSpeed = 8         #Speed while travelling from one node to another.
     StartZone = 1           #This is the area you will stand in when you toggle it on.
-    RenderOrigin = 1        #DEBUG: Render the hologram origins of the foorplate
-    Bobbing = 1             #Wobble camera while moving
+    RenderOrigin = 0        #DEBUG: Render the hologram origins of the footplate
     ProximityMode = 1       #Allow user to only return to origin/seat if within ProximityDist. (WARNING: failure to return is NOT a valid excuse for griefing)
     ProximityDist = 120     #Distance to be within to return to origin/seat (only while ProximitySeat or ProximityFootplate is enabled)
+    TextSize = 25           #EGP text size for wire components.
     
     #Controls
     UseKeys = table(
@@ -68,11 +87,12 @@ if(first()|dupefinished()){#[
         
         PAD_5,PAD_1,PAD_2,PAD_3     for numpad keys
         
+        
+    ]#    
     
     
-    
-    #Warranty void if e2 is tampered beyond this line 
-    ---------------------------------------------------------]#
+#Warranty void if e2 is tampered beyond this line 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------
     
 
     CurrentZone = StartZone
@@ -104,8 +124,13 @@ if(first()|dupefinished()){#[
         #ifdef entity:plyEnterVehicle(entity)
 
             hint("Running Cabwalk in hybrid mode.",5)
+
             FootplatePod["Lock",number] = 1
+            FootplatePod["Allow Buttons",number] = 0
+            FootplatePod["Crosshairs",number] = 1        
+
             SeatPod["Lock",number] = 0
+
             Mode = 1                        
             
         #else
@@ -119,11 +144,13 @@ if(first()|dupefinished()){#[
         
         Mode = 2
         hint("No seat detected. Running Cabwalk in footplate mode.",5)
+
         FootplatePod["Lock",number] = 0
         FootplatePod["Allow Buttons",number] = Buttons
         FootplatePod["Crosshairs",number] = Crosshair
         
     }
+
 
     
     Footplate = FootplatePod["Entity",entity]
@@ -139,6 +166,14 @@ if(first()|dupefinished()){#[
     holoParent(1,holoEntity(0))
     holoScale(1,vec(0.3,0.3,0.8)*RenderOrigin)
     H1 = holoEntity(1)
+    
+    EGP:egpText(1,"",vec2(0))
+    EGP:egpColor(1,vec(0))
+    EGP:egpFont(1,"Lucida Console",TextSize)
+    
+    EGP:egpText(2,"",vec2(0))
+    EGP:egpColor(2,vec(255,200,0))
+    EGP:egpFont(2,"Lucida Console",TextSize)
     
     FootplateDefaultPos = Footplate:pos()
     FootplateDefaultAng = Footplate:angles()
@@ -591,6 +626,8 @@ if(clk()){
         
         if(changed(IsDriving)){#setting/resetting variables
       
+            Res=egpScrSize(User)
+
             setNative()
             
             SeatPod["Lock",number] = CamController["Activated",number] = Active = IsDriving
@@ -607,7 +644,7 @@ if(clk()){
             if(changed(KeyToggle)&KeyToggle){
                 
                 Active = !Active
-                
+                                
             }
             
         }
@@ -630,6 +667,9 @@ if(clk()){
         
             if(!Active){
                 
+                EGP:egpText(1,"",vec2(0))
+                EGP:egpText(2,"",vec2(0))
+
                 if(Footplate:pos():distance(FootplateParent:toWorld(FootplateDefaultPos))<ProximityDist|!ProximityMode){
                     
                     KeyboardDisabled = 0
@@ -657,8 +697,17 @@ if(clk()){
         Ranger = CamController["Trace",ranger]
         RangerEnt = Ranger:entity()
         
+            if(changed(RangerEnt)){
+                
+                String = Ranger:distance()<70 ? RangerEnt:getName() : ""
+                EGP:egpText(1,String,vec2(0.5,0.52)*Res-vec2(TextSize*String:length()*0.32+0.04*TextSize,-0.04*TextSize))
+                EGP:egpText(2,String,vec2(0.5,0.52)*Res-vec2(TextSize*String:length()*0.32,0))
+                                
+                
+            }
+
         if(Ranger:distance()<70){#How long the player can reach
-            
+                        
             if(changed(M1)&M1){
                 
                 RangerEnt:use()
@@ -679,14 +728,12 @@ if(clk()){
         
         if(TravelMode == 0){
             
-            if((W|A|S|D)){
-                
-                
-                
+            if((W|A|S|D)){                
                 
                 if(ZoneType == "area"){#movement within an area
                     
                     PosOld = Pos    #$Pos won't work after its been clamped??
+
                     Pos += MoveDir * Speed
                     Pos = areaClamp(Pos)
                 
@@ -704,6 +751,9 @@ if(clk()){
                     CPOld = CP
                     
                     Rate = Speed/Pos1:distance(Pos2)
+
+                    CIndex = floor(CP)
+                    Coefficient = CP-CIndex
                     
                     if(Coefficient){
                         
@@ -712,13 +762,11 @@ if(clk()){
                         
                     }
                     else{
-                        
-                            
-                        CIndex = floor(CP)
-                        
+                                                
                         DotLower = clamp((Pos-Array[CIndex,vector]):normalized():dot(MoveDir:normalized()),-1,0)*(CIndex!=0)
                         DotHigher = clamp((Pos-Pos2):normalized():dot(MoveDir:normalized()),-1,0)*(CIndex!=Array:count()-1)
-                        if(DotLower<DotHigher){
+                                                
+                        if(DotLower<(DotHigher)){ # new array count ensures you can't go to a point above the top index. might be inverted...
                             
                             Rate = Speed/Pos:distance(Array[CIndex,vector])
                             CP += DotLower*Rate
