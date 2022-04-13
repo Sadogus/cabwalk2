@@ -1,6 +1,6 @@
 @name Sado's Cabwalk 2.0.0 Simulator
 @inputs NativeMap:entity [SeatPod FootplatePod CamController EGP]:wirelink 
-@outputs KeyboardDisabled
+@outputs KeyboardDisabled CP IdealCP CIndex Coefficient
 @persist TempCP CP IdealCP CIndex Coefficient PortalCoefficient PortalIndex DestIndex Active DirMoveDot CurrentZone ActivePortal YawOffset StopLoopback IsDriving SelectedPortalSide TextSize
 @persist Reset M1 M2 W A S D Sprint TravelMode WalkSpeed SprintSpeed PortalSpeed StartZone Mode RenderOrigin ProximityMode ProximityDist ReturnToOrigin AutoPortalMove Res:vector2 
 @persist [Pos Pos1 Pos1Ideal Pos2 Pos2L MoveDir AreaPos AreaScale FootplateDefaultPos]:vector [User SDriver FDriver CurrentMap Footplate Seat H0 H1 ZoneParent TempParent ReqEnt FootplateParent]:entity
@@ -63,9 +63,9 @@ if(first()|dupefinished()){#[@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     #Simulator General Settings
     WalkSpeed = 4           #Speed while walking normally.
-    SprintSpeed = 12        #Speed while holding down shift.
+    SprintSpeed = 62        #Speed while holding down shift.
     PortalSpeed = 8         #Speed while travelling from one node to another.
-    StartZone = 1           #This is the area you will stand in when you toggle it on.
+    StartZone = 24           #This is the area you will stand in when you toggle it on.
     RenderOrigin = 0        #DEBUG: Render the hologram origins of the footplate
     ProximityMode = 1       #Allow user to only return to origin/seat if within ProximityDist. (WARNING: failure to return is NOT a valid excuse for griefing)
     ProximityDist = 120     #Distance to be within to return to origin/seat (only while ProximitySeat or ProximityFootplate is enabled)
@@ -909,8 +909,8 @@ if(clk()){
                 
                 if(Zone[2,string] == "poly"){
                     
-                    CP = ReqPortal[3,number] + 1
-                    CIndex = floor(CP) - 1
+                    CP = ReqPortal[4,number]
+                    CIndex = floor(CP)
                     
                 }
                 
