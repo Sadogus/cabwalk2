@@ -310,7 +310,6 @@ if(first()|dupefinished()){#[@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     function resetPos(){ #resets the position of the footplate when it is turned on/off
         
         CurrentZone = Zones[StartZone,table][1,number]
-        printTable(Zones)
         TravelMode = 0
         PortalCoefficient = 0
 
