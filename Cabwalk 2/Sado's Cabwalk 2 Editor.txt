@@ -1,4 +1,4 @@
-@name Sado's Cabwalk 2.0.1 Editor
+@name Sado's Cabwalk 2.0.2 Editor
 @inputs [Ent1 Ent2 Ent3 Ent4 Ent5]:entity   #ONLY USED FOR IMPORTING!! Here you can add more if you use more than 5 parent entities
 @outputs XCount [DeleteQuery IndexedEnts]:array Deparented
 @persist [Areas Polygons Portals Map Indexes Selectable Temp PolyImport RenderPortals ExportMap EAreas EPolygons EPortals]:table 
@@ -120,7 +120,7 @@ if(first()){#[@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     
-    Version = "2.0.1" 
+    Version = "2.0.2" 
     
     Interpolate = array()
     Indexes = table(table(),table())
