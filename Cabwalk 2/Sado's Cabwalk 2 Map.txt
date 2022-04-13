@@ -1,4 +1,4 @@
-@name Sado's Cabwalk 2.0.1 Map
+@name Sado's Cabwalk 2.0.2 Map
 @inputs [Ent1 Ent2 Ent3 Ent4 Ent5]:entity   #Here you can add more if you use more than 5 parent entities
 @outputs NativeMap:entity [ActiveZones ActivePortals]:table
 @persist [Map Areas Polygons Portals Global Indexes Selectable PolyImport RenderPortals ImportedPortal ReqPortal TheGlobal RequestGlobal Children]:table Wave Wave2 XCount PCount ReqEnt:entity
@@ -30,20 +30,7 @@ if(first()|dupefinished()|inputClk()){#[@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     #Paste the exported config from the editor down below.
     
 
-Areas = table(
-#Area(Area) 1
-table( 1 , "area" , Ent1 , vec(93.75,-66.85,-4.1) , vec(74.7,75.1,0) )
-)
-Polygons = table(
-#Area(Poly) 2
-table( 2 , "poly" , Ent1 , array(
-vec(71.1,35,-4.1),vec(129.2,57.9,-4.4),vec(78.3,89,-4.3),vec(186.9,83.4,-4.7)
-),0 )
-)
-Portals = table(
-#Portal 1
-table( 3 , "portal" , 1 , 2 , vec(91.5,-29.3,-4.1) , 0 , 6 , 6 , 1 , 0 )
-)
+
 
 
 
