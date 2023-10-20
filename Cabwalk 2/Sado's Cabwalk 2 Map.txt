@@ -1,4 +1,4 @@
-@name Sado's Cabwalk 2.0.2 Map
+@name Sado's Cabwalk 2.0.3 Map
 @inputs [Ent1 Ent2 Ent3 Ent4 Ent5]:entity   #Here you can add more if you use more than 5 parent entities
 @outputs NativeMap:entity [ActiveZones ActivePortals]:table
 @persist [Map Areas Polygons Portals Global Indexes Selectable PolyImport RenderPortals ImportedPortal ReqPortal TheGlobal RequestGlobal Children]:table Wave Wave2 XCount PCount ReqEnt:entity
