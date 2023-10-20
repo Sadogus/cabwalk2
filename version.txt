@@ -1,3 +1,3 @@
-version:2.0.2
-name:Release version bugfix 2
-changelog:fixed global portals on polygons bug and simulator start zone. WARNING: You will have to change your StartZone variable to the VISIBLE number instead of the table number!
+version:2.0.3
+name:Playercore middle finger
+changelog:Deprecated the simulator in favor of a simplified version that doesn't use playercore
