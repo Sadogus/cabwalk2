@@ -1,4 +1,4 @@
-@name Sado's Cabwalk 2.0.2 Simulator
+@name [Deprecated. Use the LITE simulator until furthe rnotice!] Sado's Cabwalk 2.0.2 Simulator
 @inputs NativeMap:entity [SeatPod FootplatePod CamController EGP]:wirelink 
 @outputs KeyboardDisabled CP IdealCP CIndex Coefficient
 @persist TempCP CP IdealCP CIndex Coefficient PortalCoefficient PortalIndex DestIndex Active DirMoveDot CurrentZone ActivePortal YawOffset StopLoopback IsDriving SelectedPortalSide TextSize
